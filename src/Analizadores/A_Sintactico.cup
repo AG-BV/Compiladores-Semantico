@@ -8,6 +8,7 @@ parser code
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
+    public static LinkedList<LinkedList> tablaSimbolos = new LinkedList<LinkedList>();
 
     //Metodo al que se llama automaticamente ante algun error sintactico
     public void syntax_error(Symbol s)
@@ -42,16 +43,24 @@ parser code
     }
 
     public void recuerdoAccess(String pAcces){
-        if(pAcces == null){
-
-        }
-        else{
+        if(pAcces != null){
             pilaSemantica.push(new RS_ACCESS(pAcces));
         }
     }
 
     public void recuerdoID(String pIdent){
         pilaSemantica.push(new RS_IDENT(pIdent));
+    }
+
+    public void insertarTablaSimbolos(){
+        LinkedList<RegistroSemantico> linea = new LinkedList<RegistroSemantico>();
+        LinkedList<RegistroSemantico> test = new LinkedList<RegistroSemantico>();
+        test = pilaSemantica;
+        while(pilaSemantica.getLast().getValueType() != 1){
+            linea.add(pilaSemantica.pop());
+        }
+        linea.addFirst(pilaSemantica.pop());
+        tablaSimbolos.add(linea);
     }
 :}
 
@@ -168,7 +177,8 @@ VAR_CONTRACT ::= TIPO:inputTipo {: recuerdoTipo(inputTipo); :} VAR_ARR VAR_ACCES
                 | TIPO error punto_coma ;// Aque se agrego ----------------------------------------------
 
 /*--------------- 1.A VARIABLES sin asignacion ----------------------*/
-VAR_CONTRACT_P ::= punto_coma | VAR_CONTRACT_C punto_coma;
+VAR_CONTRACT_P ::= punto_coma {: insertarTablaSimbolos(); :} 
+                | VAR_CONTRACT_C punto_coma;
 
 /*--------------- 1.B VARIABLES con asignacion ----------------------*/
 VAR_CONTRACT_C ::= igual EXP;///////////////////////Prueba

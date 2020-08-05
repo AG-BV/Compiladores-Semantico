@@ -40,6 +40,7 @@ public class main {
             System.out.println("--------------------------- Errores sintacticos ---------------------------");
             accessErrors(sintactico);
             LinkedList<RegistroSemantico> pilaSemantica = sintactico.pilaSemantica;
+            LinkedList<LinkedList> tablaSimbolos = sintactico.tablaSimbolos;
             System.out.println("F");
             // System.out.println(sintactico.resultado);
         } catch (Exception e) {

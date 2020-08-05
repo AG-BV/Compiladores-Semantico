@@ -1486,6 +1486,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
+    public static LinkedList<LinkedList> tablaSimbolos = new LinkedList<LinkedList>();
 
     //Metodo al que se llama automaticamente ante algun error sintactico
     public void syntax_error(Symbol s)
@@ -1520,16 +1521,24 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
     }
 
     public void recuerdoAccess(String pAcces){
-        if(pAcces == null){
-
-        }
-        else{
+        if(pAcces != null){
             pilaSemantica.push(new RS_ACCESS(pAcces));
         }
     }
 
     public void recuerdoID(String pIdent){
         pilaSemantica.push(new RS_IDENT(pIdent));
+    }
+
+    public void insertarTablaSimbolos(){
+        LinkedList<RegistroSemantico> linea = new LinkedList<RegistroSemantico>();
+        LinkedList<RegistroSemantico> test = new LinkedList<RegistroSemantico>();
+        test = pilaSemantica;
+        while(pilaSemantica.getFirst().getValueType() != 1){
+            linea.add(pilaSemantica.pop());
+        }
+        linea.addFirst(pilaSemantica.pop());
+        tablaSimbolos.add(linea);
     }
 
 
@@ -2453,7 +2462,7 @@ class CUP$analisis_sintactico$actions {
           case 95: // VAR_CONTRACT_P ::= punto_coma 
             {
               String RESULT =null;
-
+		 insertarTablaSimbolos(); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("VAR_CONTRACT_P",24, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;

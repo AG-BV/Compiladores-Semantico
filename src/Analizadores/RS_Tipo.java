@@ -5,5 +5,6 @@ public class RS_Tipo extends RegistroSemantico {
 
     RS_Tipo(String tipo){
         this.tipo = tipo;
+        this.valueType = 1;
     }
 }

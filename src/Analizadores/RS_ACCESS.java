@@ -5,5 +5,6 @@ public class RS_ACCESS extends RegistroSemantico {
 
     RS_ACCESS (String access){
         this.access = access;
+        this.valueType = 2;
     }
 }

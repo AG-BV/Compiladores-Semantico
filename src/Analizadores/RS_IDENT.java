@@ -5,5 +5,6 @@ public class RS_IDENT extends RegistroSemantico {
 
     RS_IDENT(String ident){
         this.ident = ident;
+        this.valueType = 3;
     }
 }
