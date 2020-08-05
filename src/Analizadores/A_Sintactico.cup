@@ -1,0 +1,376 @@
+package Analizadores;
+import java_cup.runtime.Symbol;
+import java.util.LinkedList;
+
+parser code
+{:
+    public String resultado="";
+    public static LinkedList<TError> TablaES = new LinkedList<TError>();
+    public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
+    public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
+
+    //Metodo al que se llama automaticamente ante algun error sintactico
+    public void syntax_error(Symbol s)
+    {        
+        if(s.value != null){
+            String lexema = s.value.toString();
+            int fila = s.left;
+            int columna = s.right;
+            TError datos = new TError(lexema,fila,columna,"Error Sintactico","Caracter no esperado");
+            TablaES.add(datos);
+            System.out.println("------ Recuperacion exitosa ------");
+            System.out.println("\t\tLexema: "+lexema);
+        }
+    }
+
+    //Metodo al que se llama en el momento en que ya no es posible una recuperacion de errores
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception
+    {        
+        if(s.value != null){
+            String lexema = s.value.toString();
+            int fila = s.left;
+            int columna = s.right;
+            TError datos = new TError(lexema,fila,columna,"Error Sintactico","Caracter no esperado");
+            TablaES.add(datos);
+            System.out.println("------ Error Sintactico irrecuperable ------");
+            System.out.println("\t\tLexema: "+lexema);
+        }
+    }
+
+    public void recuerdoTipo(String pTipo){
+        pilaSemantica.push(new RS_Tipo(pTipo));
+    }
+
+    public void recuerdoAccess(String pAcces){
+        if(pAcces == null){
+
+        }
+        else{
+            pilaSemantica.push(new RS_ACCESS(pAcces));
+        }
+    }
+
+    public void recuerdoID(String pIdent){
+        pilaSemantica.push(new RS_IDENT(pIdent));
+    }
+:}
+
+//------> Codigo para las acciones gramaticales
+action code
+{:
+:}
+
+/*--------------- 2da Area: Declaraciones -----------------------*/
+//------> declaracion de terminales 
+terminal String pragma, solidity, techo, contract, O_Parent_L, C_Parent_L,enumSoli, punto_coma, coma, bool, byteSoli, bytes, uint, uint_O, uint_DS, uint_TD, uint_SC, uint_CVO, uint_DCS, intSoli, int_O, int_DS, int_TD, int_SC, int_CVO, int_DCS, address, address_payable, O_Parent_C, C_Parent_C, publicSoli, privateSoli, igual, trueSoli, falseSoli, igual_igual , mayor_igual , mayor , menor_igual , menor , diferente , op_or , op_and , negacion, mas , menos , div , por , O_Parent_R , C_Parent_R , porcentaje , mas_igual , menos_igual , por_igual , div_igual, punto, thisSoli, whileSoli, returnSoli, breakSoli, continueSoli, forSoli, doSoli, ifSoli, elseSoli, interrogacion_C, punto_punto, structSoli, functionSoli, payableSoli, internalSoli, returns, charss, string, ufixedSoli, ident, numero,numero_HEX,stringSoli, B_I , B_II , B_III , B_IV , B_V , B_VI , B_VII , B_IIX , B_IX , B_X , B_XI , B_XII , B_XIII , B_XIV , B_XV , B_XVI , B_XVII , B_XIIX , B_XIX , B_XX , B_XXI , B_XXII , B_XXIII , B_XXIV , B_XXV , B_XXVI , B_XXVII , B_XXIIX , B_XXIX , B_XXX , B_XXXI , B_XXXII;
+
+//------> declaracion de no terminales
+non terminal String INICIO, BODY_CONTRACT, BODY_CONTRACT_P, BODY_CONTRACT_PP, BODY_CONTRACT_PPP, EN, STRU, FUNC, EN_IDENT, TIPO, VAR_ARR, VAR_ACCESS, VAR_CONTRACT, VAR_CONTRACT_C, EXP, OP_ARIT, OP,OP_BOOL,OP_OP_BOOL, OP_ARIT_P, OP_BOOL_P,FUNC_CALL_PARAMS,FUNC_CALL_PARAMS_P,BODY_LIT_TF, VAR_CONTRACT_P, STRU_WHILE, BODY_SENT, BODY_ASSIGN, BODY_SENT_P, BODY_FUN_CALL, BODY_SENT_M, STRU_FOR, FOR_VAR, STRU_DO_WHILE, STRU_IF, STRU_ELSE, STRU_IF_LINE, STRUCTURE, STRUCTURE_VAR, STRU_IF_ELSE_IN, STRU_ELSE_IN, CUERPO, FUNC_PARAM, FUNC_MOD, FUNC_RETURNS, CUERPO_M, ASSIGN_NOT_VAR, BODY_SENT_PP, CUERPO_P, EXP_P, EXP_PP, EXP_PPP, OP_EXCL, BOOL_GATE, FUNC_CALL_CASE, FUNC_CALL_CASE_P, ARIT_GATE, EXP_P_S, INICIO_S, CUERPO_MA, CUERPO_ASSIGN_F, CUERPO_ASSIGN_FP, F_EXP,F_EXP_P, F_EXP_PP, F_BODY_LIT_TF, F_ARIT_GATE, F_OP_ARIT_P, F_EXP_P_S, F_FUNC_CALL_CASE, F_OP_ARIT, F_EXP_PPP, F_FUNC_CALL_CASE_P, F_OP_ARIT_Parent, F_OP , NEGADO, OP_BOOL_N, FS_EXP,FS_EXP_P, FS_EXP_PP, FS_BODY_LIT_TF, FS_ARIT_GATE, FS_EXP_P_S, FS_EXP_PPP, FS_OP, FS_BOOL_GATE, FS_OP_BOOL_P, FS_OP_OP_BOOL, FS_OP_BOOL , PARENT_S, OP_ARIT_A, FS_OP_BOOL_F, PCLASS;
+
+precedence left porcentaje, mas_igual, por_igual, div_igual, menos_igual;
+precedence nonassoc C_Parent_R;
+precedence left  mas, menos;
+precedence left  por, div;
+// precedence left O_Parent_R;
+
+start with INICIO;
+
+/*--------------------- Reglas Semanticas ---------------------------*/
+// INICIO ::= pragma solidity techo numero numero punto_coma INICIO_P;
+
+/* Si se coloca errores aquí se omiten todos los errores porsteriores*/
+INICIO ::= pragma solidity techo numero numero punto_coma contract ident O_Parent_L BODY_CONTRACT C_Parent_L INICIO_S ;
+INICIO_S ::= contract ident O_Parent_L BODY_CONTRACT C_Parent_L INICIO_S |  ;
+
+BODY_CONTRACT ::= EN BODY_CONTRACT | BODY_CONTRACT_P;
+BODY_CONTRACT_P ::= VAR_CONTRACT BODY_CONTRACT_P | BODY_CONTRACT_PP;
+BODY_CONTRACT_PP ::= STRUCTURE BODY_CONTRACT_PP | BODY_CONTRACT_PPP;
+BODY_CONTRACT_PPP ::= FUNC BODY_CONTRACT_PPP | ;
+
+/*------------------------- FUNCIONES -------------------------------*/
+FUNC ::= functionSoli ident O_Parent_R TIPO ident FUNC_PARAM C_Parent_R FUNC_MOD FUNC_RETURNS O_Parent_L CUERPO_M returnSoli EXP punto_coma C_Parent_L | functionSoli error C_Parent_L; // Aqui se agrego ---------
+FUNC_PARAM ::= coma TIPO ident FUNC_PARAM | ;
+FUNC_MOD ::= payableSoli | privateSoli | publicSoli | internalSoli | ;
+FUNC_RETURNS ::= returns O_Parent_R TIPO ident C_Parent_R | ;
+
+/*--------------------------- CUERPO --------------------------------*/
+/* Revisar declaraciones con tipo en cuerpo de funcion*/
+CUERPO_M ::= CUERPO_MA CUERPO_M | ;
+CUERPO_MA ::= TIPO VAR_ARR VAR_ACCESS ident CUERPO_ASSIGN_F | CUERPO ;
+CUERPO ::= ident igual CUERPO_P | ident punto ident igual CUERPO_P | EXP punto_coma | O_Parent_R FUNC_CALL_PARAMS punto_coma | STRU;
+CUERPO_P ::= ASSIGN_NOT_VAR | STRU_IF_LINE;
+
+/*-------------------- CUERPO ASIGNACIONES --------------------------*/
+CUERPO_ASSIGN_F ::= igual CUERPO_ASSIGN_FP | punto_coma;
+CUERPO_ASSIGN_FP ::= ASSIGN_NOT_VAR | STRU_IF_LINE;
+
+/*------------------------ Estructuras ------------------------------*/
+STRUCTURE ::= structSoli ident O_Parent_L TIPO VAR_ARR VAR_ACCESS ident punto_coma STRUCTURE_VAR C_Parent_L | structSoli error C_Parent_L | structSoli ident error C_Parent_L ; // aqui se agrego -----------
+STRUCTURE_VAR ::= TIPO VAR_ARR VAR_ACCESS ident punto_coma STRUCTURE_VAR | ;
+
+//---------------------------------------------------------------------------------------------------------------------------//
+/*------------------- Estructuras de control ------------------------*/
+STRU ::= STRU_WHILE | STRU_FOR | STRU_DO_WHILE | STRU_IF;
+
+/*--------------------------- While ---------------------------------*/
+STRU_WHILE ::= whileSoli O_Parent_R OP_BOOL C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L | whileSoli  error C_Parent_L; // aqui se agrego ----------
+
+/*---------------------------- For ----------------------------------*/
+STRU_FOR ::= forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L ; // aqui se agrego ----------
+
+/*------------------------- do-while --------------------------------*/
+STRU_DO_WHILE ::= doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma ; // aqui se agrego ----------
+
+/*---------------------------- if -----------------------------------*/
+STRU_IF ::= ifSoli O_Parent_R OP_BOOL C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
+
+/*--------------------------- else ----------------------------------*/
+STRU_ELSE ::= elseSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L | elseSoli error C_Parent_L | ; // Aqui se agrego ---------
+
+/*-------------------------- If line --------------------------------*/
+STRU_IF_LINE ::= O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto EXP punto_coma 
+        | O_Parent_R error punto_coma 
+        | O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP error punto_coma ; // en espera de poncho-----------
+
+
+/*------------------------- BODY_SENT -------------------------------*////AGREGAR AQUI
+BODY_SENT_M ::= BODY_SENT BODY_SENT_M | ;
+BODY_SENT ::= ident BODY_SENT_P | thisSoli punto ident igual EXP punto_coma
+    | whileSoli O_Parent_R OP_BOOL C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L 
+    | forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L 
+    | doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma 
+    | STRU_IF_ELSE_IN
+    | returnSoli punto_coma 
+    | breakSoli punto_coma 
+    | continueSoli punto_coma ;
+
+BODY_SENT_P ::= punto ident BODY_SENT_PP| BODY_SENT_PP;
+BODY_SENT_PP ::= BODY_ASSIGN | BODY_FUN_CALL | igual O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto EXP punto_coma;
+STRU_IF_ELSE_IN ::= ifSoli O_Parent_R OP_BOOL C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE_IN ;
+STRU_ELSE_IN ::= elseSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L | ;
+
+// BODY_WHILE ::= BODY_SENT BODY_WHILE | epsilon;
+BODY_ASSIGN ::= igual EXP punto_coma ;
+BODY_FUN_CALL ::= O_Parent_R FUNC_CALL_PARAMS C_Parent_R punto_coma ;
+FOR_VAR ::= ident igual EXP ;
+// IF_LINE_VAR ::= punto ident | ;
+
+FUNC_CALL_PARAMS ::= FS_EXP FUNC_CALL_PARAMS_P | ;
+FUNC_CALL_PARAMS_P ::= coma FS_EXP FUNC_CALL_PARAMS | ;
+ASSIGN_NOT_VAR ::= EXP punto_coma;
+//-----------------------------------------------------------------------------revisar igual sr----------------------------------------------//
+/*--------------------------- ENUMS ---------------------------------*///TIENE PUNTO Y COMA
+EN ::= enumSoli ident O_Parent_L ident EN_IDENT C_Parent_L | enumSoli error C_Parent_L ;  // Aque se agrego ----------------------------------------------
+EN_IDENT ::= coma ident EN_IDENT | ;
+
+/*------------------------- VARIABLES -------------------------------*///INCOMPLETA
+VAR_CONTRACT ::= TIPO:inputTipo {: recuerdoTipo(inputTipo); :} VAR_ARR VAR_ACCESS:inputAccess {: recuerdoAccess(inputAccess); :} ident:b {: recuerdoID(b); :} VAR_CONTRACT_P 
+                | TIPO error punto_coma ;// Aque se agrego ----------------------------------------------
+
+/*--------------- 1.A VARIABLES sin asignacion ----------------------*/
+VAR_CONTRACT_P ::= punto_coma | VAR_CONTRACT_C punto_coma;
+
+/*--------------- 1.B VARIABLES con asignacion ----------------------*/
+VAR_CONTRACT_C ::= igual EXP;///////////////////////Prueba
+
+/*----------------- 1.C Estructura Variables ------------------------*/
+VAR_ARR ::= O_Parent_C C_Parent_C | ;
+VAR_ACCESS ::= publicSoli:b {: RESULT = b; :} 
+            | privateSoli:b {: RESULT = b; :}
+            | ;
+
+/*------------------------ Expresiones ------------------------------*/
+/*-------------------- Expresio Principal ---------------------------*/
+EXP ::= ident EXP_P | thisSoli EXP_PP | BODY_LIT_TF | ARIT_GATE | BOOL_GATE;
+
+//Operacion booleana con true o false de primero
+BOOL_GATE ::= trueSoli OP_BOOL_P 
+            | falseSoli OP_BOOL_P;
+
+ARIT_GATE ::= numero:num {:listaParametros.add(Integer.parseInt(num));:} OP_ARIT_P 
+            | numero:num {:listaParametros.add(Integer.parseInt(num));:};
+
+
+//Filto en caso id.id
+EXP_P ::= punto ident EXP_P_S 
+        | EXP_P_S;
+
+//caso funcion | Caso operacion aritmetica | Caso operacion booleana
+EXP_P_S ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
+
+//caso funcion | Caso operacion aritmetica | Caso operacion booleana
+EXP_PP ::= punto ident EXP_PPP;
+EXP_PPP ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
+
+/*--------------------- LLamadas a funciones ------------------------*/
+// FUNC_CALL_CASE ::= ident FUNC_CALL_CASE_P | thisSoli punto ident FUNC_CALL_CASE_P | C_Parent_R | EXP;
+FUNC_CALL_CASE ::= FS_EXP FUNC_CALL_CASE_P | C_Parent_R;
+FUNC_CALL_CASE_P ::= coma FUNC_CALL_CASE | C_Parent_R ;
+
+/*------------------- Operaciones aritmeticas -----------------------*///NO TIENE PUNTO Y COMA
+OP_ARIT ::= numero:num {:listaParametros.add(Integer.parseInt(num));:} OP_ARIT_P 
+            | ident OP_ARIT_A 
+            | thisSoli punto ident OP_ARIT_A 
+            | numero:num {:listaParametros.add(Integer.parseInt(num));:};
+OP_ARIT_A ::= O_Parent_R FUNC_CALL_CASE 
+            | OP_ARIT_P 
+            | ;
+OP_ARIT_P ::= OP PARENT_S OP_ARIT 
+            | C_Parent_R;
+// OP_ARIT_Parent ::= punto ident | ;
+
+PARENT_S ::= C_Parent_R | O_Parent_R | ;
+
+OP ::= mas | menos | div | por |  porcentaje | mas_igual | menos_igual | por_igual | div_igual;
+OP_EXCL ::= mas | menos | div | por | porcentaje | mas_igual | menos_igual | por_igual | div_igual;
+// THREE ::= ident | thisSoli punto ident | numero | ;
+
+/*-------------------- Operaciones booleanas ------------------------*///NO TIENE PUNTO Y COMA
+OP_BOOL ::= NEGADO OP_BOOL_N;
+OP_BOOL_N ::= trueSoli OP_BOOL_P | falseSoli OP_BOOL_P | ident OP_BOOL_P | numero OP_BOOL_P;
+OP_BOOL_P ::= OP_OP_BOOL OP_BOOL | ;
+
+OP_OP_BOOL ::= igual_igual | mayor_igual | mayor | menor_igual | menor | diferente | op_or | op_and;
+
+NEGADO ::= negacion | ;
+
+/*---------------------- Literales de cuerpo ------------------------*///NO TIENE PUNTO Y COMA
+BODY_LIT_TF ::= numero_HEX | stringSoli;
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*------------------------ Expresiones ------------------------------*/
+/*-------------------- Expresio Principal ---------------------------*/
+F_EXP ::= ident F_EXP_P | thisSoli F_EXP_PP | F_BODY_LIT_TF | F_ARIT_GATE;
+
+//Operacion booleana con true o false de primero
+F_ARIT_GATE ::= numero F_OP_ARIT_P;
+
+//Filto en caso id.id
+F_EXP_P ::= punto ident F_EXP_P_S 
+        | F_EXP_P_S;
+
+//caso funcion | Caso operacion aritmetica | Caso operacion booleana
+F_EXP_P_S ::= O_Parent_R F_FUNC_CALL_CASE | F_OP F_OP_ARIT | igual F_OP_ARIT ;
+
+//caso funcion | Caso operacion aritmetica | Caso operacion booleana
+F_EXP_PP ::= punto ident F_EXP_PPP;
+F_EXP_PPP ::= O_Parent_R F_FUNC_CALL_CASE | F_OP F_OP_ARIT | ;
+
+/*--------------------- LLamadas a funciones ------------------------*/
+F_FUNC_CALL_CASE ::= ident F_FUNC_CALL_CASE_P | thisSoli punto ident F_FUNC_CALL_CASE_P | C_Parent_R;
+F_FUNC_CALL_CASE_P ::= coma F_FUNC_CALL_CASE | C_Parent_R ;
+
+/*------------------- Operaciones aritmeticas -----------------------*///NO TIENE PUNTO Y COMA
+F_OP_ARIT ::= numero F_OP_ARIT_P | ident F_OP_ARIT_Parent F_OP_ARIT_P | thisSoli punto ident F_OP_ARIT_Parent F_OP_ARIT_P;
+F_OP_ARIT_P ::= F_OP F_OP_ARIT | ;
+
+F_OP_ARIT_Parent ::= punto ident | ;
+F_OP ::= mas | menos | div | por | porcentaje | mas_igual | menos_igual | por_igual | div_igual;
+
+/*---------------------- Literales de cuerpo ------------------------*///NO TIENE PUNTO Y COMA
+F_BODY_LIT_TF ::= numero_HEX | stringSoli;
+
+//-----------------------------------------------------------------------------------
+/* Esto se agrego para poder tener expresiones booleanas en las llamadas a funciones*/
+//-----------------------------------------------------------------------------------
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*------------------------ Expresiones ------------------------------*/
+/*-------------------- Expresio Principal ---------------------------*/
+FS_EXP ::= ident FS_EXP_P | thisSoli FS_EXP_PP | FS_BODY_LIT_TF | FS_ARIT_GATE | FS_BOOL_GATE;
+
+//Operacion booleana con true o false de primero
+FS_BOOL_GATE ::= trueSoli FS_OP_BOOL_P | falseSoli FS_OP_BOOL_P;
+FS_ARIT_GATE ::= numero FS_OP_BOOL_P;
+
+//Filto en caso id.id
+FS_EXP_P ::= punto ident FS_EXP_P_S 
+        | FS_EXP_P_S;
+
+//caso funcion | Caso operacion aritmetica | Caso operacion booleana
+FS_EXP_P_S ::= O_Parent_R FS_OP_BOOL | FS_OP FS_OP_BOOL | FS_OP_OP_BOOL FS_OP_BOOL | ;
+
+//caso funcion | Caso operacion aritmetica | Caso operacion booleana
+FS_EXP_PP ::= punto ident FS_EXP_PPP;
+FS_EXP_PPP ::= O_Parent_R FS_OP_BOOL | FS_OP FS_OP_BOOL | FS_OP_OP_BOOL FS_OP_BOOL | ;
+
+/*--------------------- LLamadas a funciones ------------------------*/
+// FS_FUNC_CALL_CASE ::= ident FS_FUNC_CALL_CASE_P | thisSoli punto ident FS_FUNC_CALL_CASE_P | C_Parent_R;
+// FS_FUNC_CALL_CASE_P ::= coma FS_FUNC_CALL_CASE | C_Parent_R ;
+
+
+/*---------------------- Literales de cuerpo ------------------------*///NO TIENE PUNTO Y COMA
+FS_BODY_LIT_TF ::= numero_HEX | stringSoli;
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*-------------------- Operaciones booleanas ------------------------*///NO TIENE PUNTO Y COMA
+FS_OP_BOOL ::= negacion FS_OP_BOOL_F | FS_OP_BOOL_F | trueSoli FS_OP_BOOL_P | falseSoli FS_OP_BOOL_P | numero FS_OP_BOOL_P;
+FS_OP_BOOL_F ::= ident PCLASS FS_OP_BOOL_P | thisSoli punto ident FS_OP_BOOL_P;
+FS_OP_BOOL_P ::= FS_OP_OP_BOOL FS_OP_BOOL | ;
+
+FS_OP_OP_BOOL ::= igual_igual | mayor_igual | mayor | menor_igual | menor | diferente | op_or | op_and | mas | menos | div | por | porcentaje | mas_igual | menos_igual | por_igual | div_igual;
+
+PCLASS ::= punto ident | ;
+
+// FS_NEGADO ::= negacion | ;
+//-----------------------------------------------------------------------------------
+/* Fin de codigo para agregar expresiones booleanas a llamada a funiones*/
+//-----------------------------------------------------------------------------------
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*------------------------ TIPOS Datos ------------------------------*/
+TIPO ::= bool:b {:RESULT = b;:} 
+        | byteSoli:b {:RESULT = b;:}
+        | bytes:b {:RESULT = b;:}
+        | string:b {:RESULT = b;:}
+        | uint:b {:RESULT = b;:}
+        | uint_O:b {:RESULT = b;:}
+        | uint_DS:b {:RESULT = b;:}
+        | uint_TD:b {:RESULT = b;:}
+        | uint_SC:b {:RESULT = b;:}
+        | uint_CVO:b {:RESULT = b;:}
+        | uint_DCS:b {:RESULT = b;:}
+        | intSoli:b {:RESULT = b;:}
+        | int_O:b {:RESULT = b;:}
+        | int_DS:b {:RESULT = b;:}
+        | int_TD:b {:RESULT = b;:}
+        | int_SC:b {:RESULT = b;:}
+        | int_CVO:b {:RESULT = b;:}
+        | int_DCS:b {:RESULT = b;:}
+        | address:b {:RESULT = b;:}
+        | address_payable:b {:RESULT = b;:}
+        | charss:b {:RESULT = b;:}
+        | ufixedSoli:b {:RESULT = b;:}
+        | B_I:b {:RESULT = b;:}
+        | B_II:b {:RESULT = b;:}
+        | B_III:b {:RESULT = b;:}
+        | B_IV:b {:RESULT = b;:}
+        | B_V:b {:RESULT = b;:}
+        | B_VI:b {:RESULT = b;:}
+        | B_VII:b {:RESULT = b;:}
+        | B_IIX:b {:RESULT = b;:}
+        | B_IX:b {:RESULT = b;:}
+        | B_X:b {:RESULT = b;:}
+        | B_XI:b {:RESULT = b;:}
+        | B_XII:b {:RESULT = b;:}
+        | B_XIII:b {:RESULT = b;:}
+        | B_XIV:b {:RESULT = b;:}
+        | B_XV:b {:RESULT = b;:}
+        | B_XVI:b {:RESULT = b;:}
+        | B_XVII:b {:RESULT = b;:}
+        | B_XIIX:b {:RESULT = b;:}
+        | B_XIX:b {:RESULT = b;:}
+        | B_XX:b {:RESULT = b;:}
+        | B_XXI:b {:RESULT = b;:}
+        | B_XXII:b {:RESULT = b;:}
+        | B_XXIII:b {:RESULT = b;:}
+        | B_XXIV:b {:RESULT = b;:}
+        | B_XXV:b {:RESULT = b;:}
+        | B_XXVI:b {:RESULT = b;:}
+        | B_XXVII:b {:RESULT = b;:}
+        | B_XXIIX:b {:RESULT = b;:}
+        | B_XXIX:b {:RESULT = b;:}
+        | B_XXX:b {:RESULT = b;:}
+        | B_XXXI:b {:RESULT = b;:}
+        | B_XXXII:b {:RESULT = b;:};

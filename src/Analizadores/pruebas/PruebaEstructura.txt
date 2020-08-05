@@ -1,0 +1,45 @@
+pragma solidity ^0.4.0;
+
+contract Contrato{
+
+int a;
+
+	function fi(int x, int y) returns (int a ) {
+
+		if (a > 3) {
+			a= a+b;
+		} 
+		else {
+			a= a+b;
+		}
+		
+		int ww; //error por declaracion variable local...
+	}
+
+	function funcionDos (int x) returns (int xxx) {
+		a = 2 + 2;
+		return 2;
+	}
+	
+	function fi(int x, int y) returns (int a ) {
+
+		a= a+b;
+		return 2;
+	// error porque no hay cierre de funcion
+	}
+
+	function funcionTres (int x) returns (int xxx) {
+		a = 2 + 2;
+	}
+
+	function fi(int x, int y) returns (int a ) {
+
+		a= a+b;
+	}
+
+        	
+} //cierra contrato
+
+
+
+

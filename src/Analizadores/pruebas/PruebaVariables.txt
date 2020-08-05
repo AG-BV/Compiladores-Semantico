@@ -1,0 +1,39 @@
+pragma solidity ^0.4.0;
+
+contract Contrato{
+
+	enum enum1{ id1, id2, id3}
+	enum enum2{ id1, id2 id3} // error de coma
+
+	int z
+	string private a;
+	uint y  // error     
+	bytes public ; //error
+
+	int[] b;
+	int[ b;//error
+
+	int a = 2;
+	int a =; // error
+
+	struct IdStruct {
+		int y
+	}
+
+	struct idStructdos {
+		int ab;
+	}
+
+	struct { //error
+		int y;
+	}
+
+	function i(int x, int y) 
+	{
+		uint y  // error declaracion dentro de funcion     
+
+		a = 0;
+	}
+
+} //cierra contrato
+
