@@ -56,7 +56,7 @@ parser code
         LinkedList<RegistroSemantico> linea = new LinkedList<RegistroSemantico>();
         LinkedList<RegistroSemantico> test = new LinkedList<RegistroSemantico>();
         test = pilaSemantica;
-        while(pilaSemantica.getLast().getValueType() != 1){
+        while(pilaSemantica.getFirst().getValueType() != 1){
             linea.add(pilaSemantica.pop());
         }
         linea.addFirst(pilaSemantica.pop());
