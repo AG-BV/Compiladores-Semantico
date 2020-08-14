@@ -5,10 +5,12 @@ import java.util.LinkedList;
 parser code
 {:
     public String resultado="";
+
+    // lista donde se almacenan los errores sintácticos
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
-    public static LinkedList<LinkedList> tablaSimbolos = new LinkedList<LinkedList>();
+    public static LinkedList<Simbolo> tablaSimbolos = new LinkedList<Simbolo>();
 
     //Metodo al que se llama automaticamente ante algun error sintactico
     public void syntax_error(Symbol s)
@@ -38,6 +40,8 @@ parser code
         }
     }
 
+    /* Metodos para realizar las acciones semánticas*/
+
     public void recuerdoTipo(String pTipo){
         pilaSemantica.push(new RS_Tipo(pTipo));
     }
@@ -53,14 +57,40 @@ parser code
     }
 
     public void insertarTablaSimbolos(){
-        LinkedList<RegistroSemantico> linea = new LinkedList<RegistroSemantico>();
-        LinkedList<RegistroSemantico> test = new LinkedList<RegistroSemantico>();
-        test = pilaSemantica;
-        while(pilaSemantica.getFirst().getValueType() != 1){
-            linea.add(pilaSemantica.pop());
+
+        RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
+        RegistroSemantico sig = pilaSemantica.pop();
+        SimboloVariable var = new SimboloVariable();
+        if (sig.valueType == RegistroSemantico.Value.TIPO){
+            RS_Tipo tipo = (RS_Tipo) sig;
+            var.nombre = id.ident;
+            var.tipoSimbolo = "variable";
+            var.acceso = "public";
+            var.tipoVariable = tipo.tipo;
+        } else {
+            RS_ACCESS acc = (RS_ACCESS) sig;
+            RS_Tipo tipo = (RS_Tipo)pilaSemantica.pop();
+
+            var.nombre = id.ident;
+            var.tipoSimbolo = "variable";
+            var.acceso = acc.access;
+            var.tipoVariable = tipo.tipo;
         }
-        linea.addFirst(pilaSemantica.pop());
-        tablaSimbolos.add(linea);
+        var.printDatos();
+        // verificar si ya el id esta en la pila
+        boolean estaEnTabla = false;
+        for(Simbolo sim : tablaSimbolos){
+            if(sim.nombre == var.nombre){
+                // Variable ya esta definida dar error
+            }
+        }
+        
+        if (!estaEnTabla){
+            tablaSimbolos.add(var);
+        }
+    }
+    public void recordarValorAsignacion(){
+
     }
 :}
 
@@ -178,10 +208,10 @@ VAR_CONTRACT ::= TIPO:inputTipo {: recuerdoTipo(inputTipo); :} VAR_ARR VAR_ACCES
 
 /*--------------- 1.A VARIABLES sin asignacion ----------------------*/
 VAR_CONTRACT_P ::= punto_coma {: insertarTablaSimbolos(); :} 
-                | VAR_CONTRACT_C punto_coma;
+                | VAR_CONTRACT_C punto_coma {: insertarTablaSimbolos(); :};
 
 /*--------------- 1.B VARIABLES con asignacion ----------------------*/
-VAR_CONTRACT_C ::= igual EXP;///////////////////////Prueba
+VAR_CONTRACT_C ::= igual EXP {: recordarValorAsignacion(); :};///////////////////////Prueba
 
 /*----------------- 1.C Estructura Variables ------------------------*/
 VAR_ARR ::= O_Parent_C C_Parent_C | ;

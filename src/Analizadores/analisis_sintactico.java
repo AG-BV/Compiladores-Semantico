@@ -1483,10 +1483,12 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
 
     public String resultado="";
+
+    // lista donde se almacenan los errores sintácticos
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
-    public static LinkedList<LinkedList> tablaSimbolos = new LinkedList<LinkedList>();
+    public static LinkedList<Simbolo> tablaSimbolos = new LinkedList<Simbolo>();
 
     //Metodo al que se llama automaticamente ante algun error sintactico
     public void syntax_error(Symbol s)
@@ -1516,6 +1518,8 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         }
     }
 
+    /* Metodos para realizar las acciones semánticas*/
+
     public void recuerdoTipo(String pTipo){
         pilaSemantica.push(new RS_Tipo(pTipo));
     }
@@ -1530,15 +1534,36 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         pilaSemantica.push(new RS_IDENT(pIdent));
     }
 
-    public void insertarTablaSimbolos(){
-        LinkedList<RegistroSemantico> linea = new LinkedList<RegistroSemantico>();
-        LinkedList<RegistroSemantico> test = new LinkedList<RegistroSemantico>();
-        test = pilaSemantica;
-        while(pilaSemantica.getFirst().getValueType() != 1){
-            linea.add(pilaSemantica.pop());
+    public void insertarTablaSimbolos(Symbol s){
+
+        RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
+        RegistroSemantico sig = pilaSemantica.pop();
+        SimboloVariable var = new SimboloVariable();
+        if (sig.valueType == RegistroSemantico.Value.TIPO){
+            RS_Tipo tipo = (RS_Tipo) sig;
+            var.nombre = id.ident;
+            var.tipoSimbolo = "variable";
+            var.acceso = "public";
+            var.tipoVariable = tipo.tipo;
+        } else {
+            RS_ACCESS acc = (RS_ACCESS) sig;
+            RS_Tipo tipo = (RS_Tipo)pilaSemantica.pop();
+
+            var.nombre = id.ident;
+            var.tipoSimbolo = "variable";
+            var.acceso = acc.access;
+            var.tipoVariable = tipo.tipo;
         }
-        linea.addFirst(pilaSemantica.pop());
-        tablaSimbolos.add(linea);
+        var.printDatos();
+        // verificar si ya el id esta en la pila
+        bool estaEnTabla = false;
+        
+        if (!estaEnTabla){
+            tablaSimbolos.add(var);
+        }
+    }
+    public void recordarValorAsignacion(){
+
     }
 
 
@@ -2471,7 +2496,7 @@ class CUP$analisis_sintactico$actions {
           case 96: // VAR_CONTRACT_P ::= VAR_CONTRACT_C punto_coma 
             {
               String RESULT =null;
-
+		 insertarTablaSimbolos(); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("VAR_CONTRACT_P",24, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-1)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -2480,7 +2505,7 @@ class CUP$analisis_sintactico$actions {
           case 97: // VAR_CONTRACT_C ::= igual EXP 
             {
               String RESULT =null;
-
+		 recordarValorAsignacion(); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("VAR_CONTRACT_C",13, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-1)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;

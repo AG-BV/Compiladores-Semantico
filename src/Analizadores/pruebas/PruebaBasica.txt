@@ -1,0 +1,16 @@
+pragma solidity ^0.4.0;
+
+contract nombreContrato{
+
+    // Declaraciones y pueden tener asignaciones
+    int c;
+    int a;
+    uint b = 3;
+
+    // Una funcion, y en el cuerpo no declaraciones, if while y asignaciones
+
+} //cierra contrato
+
+
+
+

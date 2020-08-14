@@ -4,9 +4,16 @@ package Analizadores;
  * RegistroSemantico
  */
 public class RegistroSemantico {
-    public int valueType;
+    public Value valueType;
 
-    public int getValueType(){
+    // Enum para tener los tipos de registros semánticos posibles de manera que sea
+    // más sencillo de buscar
+    // por tipo en la pila semántica
+    public static enum Value {
+        TIPO, ACCESS, IDENT, DO
+    }
+
+    public Value getValueType() {
         return this.valueType;
     }
 }

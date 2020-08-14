@@ -3,8 +3,8 @@ package Analizadores;
 public class RS_ACCESS extends RegistroSemantico {
     public String access;
 
-    RS_ACCESS (String access){
+    RS_ACCESS(String access) {
         this.access = access;
-        this.valueType = 2;
+        this.valueType = Value.ACCESS;
     }
 }
