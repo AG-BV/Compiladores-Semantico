@@ -76,21 +76,105 @@ parser code
             var.acceso = acc.access;
             var.tipoVariable = tipo.tipo;
         }
-        var.printDatos();
+        //var.printDatos();
         // verificar si ya el id esta en la pila
         boolean estaEnTabla = false;
         for(Simbolo sim : tablaSimbolos){
-            if(sim.nombre == var.nombre){
+            if(sim.nombre.equals(var.nombre)){
                 // Variable ya esta definida dar error
+                //System.out.println("Ya esta en la tabla");
+                estaEnTabla = true;
             }
         }
-        
-        if (!estaEnTabla){
-            tablaSimbolos.add(var);
-        }
-    }
-    public void recordarValorAsignacion(){
 
+        if(estaEnTabla){
+            // Agregar el error donde corresponde
+        } else {
+            tablaSimbolos.push(var);
+        }
+
+    }
+    public void insertarTablaSimbolosAsignacion(){
+
+        RS_DO do = (RS_DO)pilaSemantica.pop();
+        RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
+        RegistroSemantico sig = pilaSemantica.pop();
+        SimboloVariable var = new SimboloVariable();
+
+        if (sig.valueType == RegistroSemantico.Value.TIPO){
+            RS_Tipo tipo = (RS_Tipo) sig;
+            var.nombre = id.ident;
+            var.tipoSimbolo = "variable";
+            var.acceso = "public";
+            var.tipoVariable = tipo.tipo;
+        } else {
+            RS_ACCESS acc = (RS_ACCESS) sig;
+            RS_Tipo tipo = (RS_Tipo)pilaSemantica.pop();
+
+            var.nombre = id.ident;
+            var.tipoSimbolo = "variable";
+            var.acceso = acc.access;
+            var.tipoVariable = tipo.tipo;
+        }
+        //var.printDatos();
+        // verificar si ya el id esta en la pila
+        boolean estaEnTabla = false;
+        for(Simbolo sim : tablaSimbolos){
+            if(sim.nombre.equals(var.nombre)){
+                // Variable ya esta definida dar error
+                //System.out.println("Ya esta en la tabla");
+                estaEnTabla = true;
+            }
+        }
+
+        if(estaEnTabla){
+            // Agregar el error donde corresponde
+        } else {
+            tablaSimbolos.push(var);
+        }
+
+    }
+
+    public void recuerdaConstante(String pConst, String pTipo){
+        RS_DO do = new RS_DO(pTipo, pConst);
+        pilaSemantica.push(do);
+    }
+
+    public void recuerdaVariable(String pConst){
+        RS_DO do = new RS_DO("variable", pConst);
+        pilaSemantica.push(do);
+    }
+
+    public void recuerdaOperador(String pOperador){
+        RS_Operador op = new RS_Operador(pOperador);
+        pilaSemantica.push(op);
+    }
+
+    public void evalBinary(){
+
+        RS_DO do_uno = (RS_DO) pilaSemantica.pop();
+        RS_DO do_op = (RS_Operador) pilaSemantica.pop();
+        // El RS siguiente se obtiene después para evitar problemas de tipo
+        // en caso de que el operador se igual ya que a la izq del igual
+        // viene un RS_IDENT y no un RS_DO
+
+        if(do_op.operador.equals("=")){
+            // verificar que el tipo concuerde en ambos lados
+            RS_IDENT do_dos = (RS_IDENT) pilaSemantica.pop();
+            
+            // Generar un DO
+            // hacer push del DO
+        } else if(do_op.operador.equals("+") || do_op.operador.equals("-")){
+            // verificar que el tipo concuerde en ambos lados
+            RS_DO do_dos = (RS_DO) pilaSemantica.pop();
+            // Generar un DO
+            // hacer push del DO
+        } else {
+            // verificar que el tipo concuerde en ambos lados
+            RS_DO do_dos = (RS_DO) pilaSemantica.pop();
+            // Generar un DO
+            // hacer push del DO
+        }
     }
 :}
 
@@ -208,10 +292,10 @@ VAR_CONTRACT ::= TIPO:inputTipo {: recuerdoTipo(inputTipo); :} VAR_ARR VAR_ACCES
 
 /*--------------- 1.A VARIABLES sin asignacion ----------------------*/
 VAR_CONTRACT_P ::= punto_coma {: insertarTablaSimbolos(); :} 
-                | VAR_CONTRACT_C punto_coma {: insertarTablaSimbolos(); :};
+                | VAR_CONTRACT_C punto_coma {: insertarTablaSimbolosAsignacion(); :};
 
 /*--------------- 1.B VARIABLES con asignacion ----------------------*/
-VAR_CONTRACT_C ::= igual EXP {: recordarValorAsignacion(); :};///////////////////////Prueba
+VAR_CONTRACT_C ::= igual:op_ig {:recuerdaOperador(op_ig);:} EXP {:evalBinary();:} ;///////////////////////Prueba
 
 /*----------------- 1.C Estructura Variables ------------------------*/
 VAR_ARR ::= O_Parent_C C_Parent_C | ;
@@ -221,14 +305,14 @@ VAR_ACCESS ::= publicSoli:b {: RESULT = b; :}
 
 /*------------------------ Expresiones ------------------------------*/
 /*-------------------- Expresio Principal ---------------------------*/
-EXP ::= ident EXP_P | thisSoli EXP_PP | BODY_LIT_TF | ARIT_GATE | BOOL_GATE;
+EXP ::= ident:ident {:recuerdaVariable(ident);:} EXP_P | thisSoli EXP_PP | BODY_LIT_TF | ARIT_GATE  | BOOL_GATE ;
 
 //Operacion booleana con true o false de primero
 BOOL_GATE ::= trueSoli OP_BOOL_P 
             | falseSoli OP_BOOL_P;
 
-ARIT_GATE ::= numero:num {:listaParametros.add(Integer.parseInt(num));:} OP_ARIT_P 
-            | numero:num {:listaParametros.add(Integer.parseInt(num));:};
+ARIT_GATE ::= numero:num {:recuerdaConstante(num, "constante_numerico");:} OP_ARIT_P
+            | numero:num {:recuerdaConstante(num, "constante_numerico");:};
 
 
 //Filto en caso id.id
@@ -240,7 +324,7 @@ EXP_P_S ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL PARENT_S OP_ARIT | OP_OP_BOOL OP
 
 //caso funcion | Caso operacion aritmetica | Caso operacion booleana
 EXP_PP ::= punto ident EXP_PPP;
-EXP_PPP ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
+EXP_PPP ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL:op {:recuerdaOperador(op);:} PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
 
 /*--------------------- LLamadas a funciones ------------------------*/
 // FUNC_CALL_CASE ::= ident FUNC_CALL_CASE_P | thisSoli punto ident FUNC_CALL_CASE_P | C_Parent_R | EXP;
@@ -248,21 +332,21 @@ FUNC_CALL_CASE ::= FS_EXP FUNC_CALL_CASE_P | C_Parent_R;
 FUNC_CALL_CASE_P ::= coma FUNC_CALL_CASE | C_Parent_R ;
 
 /*------------------- Operaciones aritmeticas -----------------------*///NO TIENE PUNTO Y COMA
-OP_ARIT ::= numero:num {:listaParametros.add(Integer.parseInt(num));:} OP_ARIT_P 
-            | ident OP_ARIT_A 
+OP_ARIT ::= numero OP_ARIT_P 
+            | ident:id {:recuerdaVariable(id);:} OP_ARIT_A 
             | thisSoli punto ident OP_ARIT_A 
-            | numero:num {:listaParametros.add(Integer.parseInt(num));:};
+            | numero:num {:recuerdaConstante(num, "constante_numerico"); evalBinary();:};
 OP_ARIT_A ::= O_Parent_R FUNC_CALL_CASE 
             | OP_ARIT_P 
-            | ;
-OP_ARIT_P ::= OP PARENT_S OP_ARIT 
+            | {:evalBinary();:};
+OP_ARIT_P ::= OP:op {:recuerdaOperador(op);:} PARENT_S OP_ARIT 
             | C_Parent_R;
 // OP_ARIT_Parent ::= punto ident | ;
 
 PARENT_S ::= C_Parent_R | O_Parent_R | ;
 
-OP ::= mas | menos | div | por |  porcentaje | mas_igual | menos_igual | por_igual | div_igual;
-OP_EXCL ::= mas | menos | div | por | porcentaje | mas_igual | menos_igual | por_igual | div_igual;
+OP ::= mas:op_op {:RESULT = op_op;:} | menos:op_op {:RESULT = op_op;:} | div | por | porcentaje | mas_igual | menos_igual | por_igual | div_igual;
+OP_EXCL ::= mas:op_op {:RESULT = op_op;:} | menos:op_op {:RESULT = op_op;:} | div | por | porcentaje | mas_igual | menos_igual | por_igual | div_igual;
 // THREE ::= ident | thisSoli punto ident | numero | ;
 
 /*-------------------- Operaciones booleanas ------------------------*///NO TIENE PUNTO Y COMA

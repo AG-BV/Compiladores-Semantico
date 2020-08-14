@@ -1534,7 +1534,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         pilaSemantica.push(new RS_IDENT(pIdent));
     }
 
-    public void insertarTablaSimbolos(Symbol s){
+    public void insertarTablaSimbolos(){
 
         RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
         RegistroSemantico sig = pilaSemantica.pop();
@@ -1554,13 +1554,23 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             var.acceso = acc.access;
             var.tipoVariable = tipo.tipo;
         }
-        var.printDatos();
+        //var.printDatos();
         // verificar si ya el id esta en la pila
-        bool estaEnTabla = false;
-        
-        if (!estaEnTabla){
-            tablaSimbolos.add(var);
+        boolean estaEnTabla = false;
+        for(Simbolo sim : tablaSimbolos){
+            if(sim.nombre.equals(var.nombre)){
+                // Variable ya esta definida dar error
+                System.out.println("Ya esta en la tabla");
+                estaEnTabla = true;
+            }
         }
+
+        if(estaEnTabla){
+            // Agregar el error donde corresponde
+        } else {
+            tablaSimbolos.push(var);
+        }
+
     }
     public void recordarValorAsignacion(){
 

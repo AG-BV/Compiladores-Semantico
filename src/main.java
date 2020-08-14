@@ -42,8 +42,10 @@ public class main {
             // ---------------------------");
             // accessErrors(sintactico);
             LinkedList<RegistroSemantico> pilaSemantica = sintactico.pilaSemantica;
-            LinkedList<LinkedList> tablaSimbolos = sintactico.tablaSimbolos;
-            // System.out.println("F");
+            LinkedList<Simbolo> tablaSimbolos = sintactico.tablaSimbolos;
+            for (Simbolo simbolo : tablaSimbolos) {
+                simbolo.printDatos();
+            }
             // System.out.println(sintactico.resultado);
         } catch (Exception e) {
             System.out.println(e);
