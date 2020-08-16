@@ -182,8 +182,6 @@ parser code
             // verificar que el tipo concuerde en ambos lados
             RS_DO do_dos = (RS_DO) pilaSemantica.pop();
 
-
-
             // Generar un DO
             // hacer push del DO
         } else if(do_op.operador.equals("+")){
@@ -217,35 +215,199 @@ parser code
         } else if (do_op.operador.equals("<") || do_op.operador.equals("<=") || do_op.operador.equals(">") || do_op.operador.equals(">=") || do_op.operador.equals("==") || do_op.operador.equals("!=")) {
             RS_DO do_dos = (RS_DO) pilaSemantica.pop();
             if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("constante_numerico")){
-                String resultado = String.valueOf(Integer.parseInt(do_uno.valor) - Integer.parseInt(do_dos.valor));
-                RS_DO newDO = new RS_DO("constante_numerico", resultado);
-                pilaSemantica.push(newDO);
+                String op = do_op.operador;
+
+                try{
+
+                    String codComparacion = "cmp ";
+                    codComparacion = codComparacion.concat(do_uno.valor);
+                    codComparacion = codComparacion.concat(", ");
+                    codComparacion = codComparacion.concat(do_dos.valor);
+                    writeLine(codComparacion, 0);
+                    
+                    String codCmp = "";
+                    switch(op){
+                        case "<":
+                        writeLine("jl", 1);
+                            break;
+                        case "<=":
+                        writeLine("jle", 1);
+                            break;
+                        case ">":
+                        writeLine("jg", 1);
+                            break;
+                        case ">=":
+                        writeLine("jge", 1);
+                            break;
+                        case "==":
+                        writeLine("je", 1);
+                            break;
+                        case "!=":
+                        writeLine("jne", 1);
+                            break;
+                    }
+                } catch(IOException e){
+                    e.printStackTrace();
+                }
+            }
+            else if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("variable")){
+                // generar codigo asm de la operacion
+                String nombreVar = do_dos.valor;
+                int operando = Integer.parseInt(do_uno.valor);
+                String op = do_op.operador;
+
+                try{
+                    // Para preservar eax
+                    writeLine("push eax", 0);
+
+                    // mov eax, dword [nombreVar]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(nombreVar);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    String codResta = "sub eax, ";
+                    codResta = codResta.concat(do_uno.valor);
+                    writeLine(codResta, 0);
+
+                    String codComparacion = "cmp eax, ";
+                    codComparacion = codComparacion.concat("0");
+                    writeLine(codComparacion, 0);
+
+                    writeLine("pop eax", 0);
+                    
+                    String codCmp = "";
+                    switch(op){
+                        case "<":
+                        writeLine("jl", 1);
+                            break;
+                        case "<=":
+                        writeLine("jle", 1);
+                            break;
+                        case ">":
+                        writeLine("jg", 1);
+                            break;
+                        case ">=":
+                        writeLine("jge", 1);
+                            break;
+                        case "==":
+                        writeLine("je", 1);
+                            break;
+                        case "!=":
+                        writeLine("jne", 1);
+                            break;
+                    }
+                } catch(IOException e){
+                    e.printStackTrace();
+                }
+                //Crear un registro DO
             }
             else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("constante_numerico")){
                 // generar codigo asm de la operacion
                 String nombreVar = do_uno.valor;
-                int operando = Integer.parseInt(do_dos.valor);
+                // int operando = Integer.parseInt(do_dos.valor);
                 String op = do_op.operador;
 
-                String codResta = "sub dword [";
-                codResta = codResta.concat(nombreVar);
-                codResta = codResta.concat("] ,");
-                codResta = codResta.concat(do_dos.valor);
                 try{
+                    // push eax
+                    writeLine("push eax", 0);
+
+                    // mov eax, dword [nombreVar]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(nombreVar);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // sub eax, valor
+                    String codResta = "sub eax, ";
+                    codResta = codResta.concat(do_dos.valor);
                     writeLine(codResta, 0);
+
+                    String codComparacion = "cmp eax, ";
+                    codComparacion = codComparacion.concat("0");
+                    writeLine(codComparacion, 0);
+                    
+                    writeLine("pop eax", 0);
+                    
                     String codCmp = "";
                     switch(op){
                         case "<":
+                        writeLine("jl", 1);
                             break;
                         case "<=":
+                        writeLine("jle", 1);
                             break;
                         case ">":
+                        writeLine("jg", 1);
                             break;
                         case ">=":
+                        writeLine("jge", 1);
                             break;
                         case "==":
+                        writeLine("je", 1);
                             break;
                         case "!=":
+                        writeLine("jne", 1);
+                            break;
+                    }
+                } catch(IOException e){
+                    e.printStackTrace();
+                }
+                //Crear un registro DO
+            }
+            else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("variable")){
+                // generar codigo asm de la operacion
+                String nombreVarUno = do_uno.valor;
+                String nombreVarDos = do_dos.valor;
+                // int operando = Integer.parseInt(do_dos.valor);
+                String op = do_op.operador;
+
+                try{
+                    writeLine("push eax", 0);
+                    writeLine("push ebx", 0);
+
+                    // mov eax, dword [nombreVarUno]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(nombreVarUno);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // mov ebx, dword [nombreVarDos]
+                    codMov = "mov ebx, dword [";
+                    codMov = codMov.concat(nombreVarDos);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // sub ebx, eax
+                    String codResta = "sub ebx, eax";
+                    writeLine(codResta, 0);
+
+                    // cmp dword [nombreDos]
+                    String codComparacion = "cmp ebx, 0";
+                    writeLine(codComparacion, 0);
+
+                    writeLine("pop ebx", 0);
+                    writeLine("pop eax", 0);
+                    
+                    String codCmp = "";
+                    switch(op){
+                        case "<":
+                        writeLine("jl", 1);
+                            break;
+                        case "<=":
+                        writeLine("jle", 1);
+                            break;
+                        case ">":
+                        writeLine("jg", 1);
+                            break;
+                        case ">=":
+                        writeLine("jge", 1);
+                            break;
+                        case "==":
+                        writeLine("je", 1);
+                            break;
+                        case "!=":
+                        writeLine("jne", 1);
                             break;
                     }
                 } catch(IOException e){

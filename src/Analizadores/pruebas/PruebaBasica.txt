@@ -11,7 +11,7 @@ contract nombreContrato{
     //uint b = 3 + 2;
 
 	function fi(int x, int y) returns (int a ) { 
-        if (x < 3) {
+        if (3 < 3) {
             a = 2;
         } else {
             c = 2;
