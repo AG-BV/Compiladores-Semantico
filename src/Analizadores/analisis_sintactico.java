@@ -1623,7 +1623,6 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
     }
     public void insertarTablaSimbolosAsignacion(){
 
-        RS_DO dop = (RS_DO)pilaSemantica.pop();
         RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
         RegistroSemantico sig = pilaSemantica.pop();
         SimboloVariable var = new SimboloVariable();
@@ -1690,19 +1689,119 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
         if(do_op.operador.equals("=")){
             // verificar que el tipo concuerde en ambos lados
-            RS_DO do_dos = (RS_DO) pilaSemantica.pop();
+            RegistroSemantico rs = pilaSemantica.pop();
+            if(rs instanceof RS_IDENT){
+                RS_IDENT do_dos = (RS_IDENT) rs;
+                // mov dword [b], 5
+                String codMov = "mov dword [";
+                codMov = codMov.concat(do_dos.ident);
+                codMov = codMov.concat("], ");
+                codMov = codMov.concat(do_uno.valor);
+                try{
+                    writeLine(codMov, 0);
+                } catch(IOException e){
+                    e.printStackTrace();
+                }
+
+                pilaSemantica.push(do_dos);
+                // dejar un RS_IDENT en la pila
+            } else {
+                RS_DO do_dos = (RS_DO) rs;
+                // mov dword [b], 5
+                String codMov = "mov dword [";
+                codMov = codMov.concat(do_dos.valor);
+                codMov = codMov.concat("], ");
+                codMov = codMov.concat(do_uno.valor);
+                try{
+                    writeLine(codMov, 0);
+                } catch(IOException e){
+                    e.printStackTrace();
+                }
+
+                pilaSemantica.push(do_dos);
+                // dejar un RS_IDENT en la pila
+                // dejar un RS_DO en la pila
+            }
 
             // Generar un DO
             // hacer push del DO
         } else if(do_op.operador.equals("+")){
+
             // verificar que el tipo concuerde en ambos lados
             RS_DO do_dos = (RS_DO) pilaSemantica.pop();
             if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("constante_numerico")){
                 String resultado = String.valueOf(Integer.parseInt(do_uno.valor) + Integer.parseInt(do_dos.valor));
                 RS_DO newDO = new RS_DO("constante_numerico", resultado);
                 pilaSemantica.push(newDO);
-            }
-            else{
+            } else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("constante_numerico")){
+                try{
+                    // mov eax, dword [var]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(do_uno.valor);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // sub eax, num
+                    String codResta = "add eax, ";
+                    codResta = codResta.concat(do_dos.valor);
+                    writeLine(codResta, 0);
+
+                } catch (IOException e ){
+                    e.printStackTrace();
+                }
+                // hago DO, variable, eax
+                RS_DO newDO = new RS_DO("variable", "eax");
+                pilaSemantica.push(newDO);
+
+            } else if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("variable")){
+                try{
+                    // mov eax, dword [var]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(do_dos.valor);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // sub eax, num
+                    String codResta = "add eax, ";
+                    codResta = codResta.concat(do_uno.valor);
+                    writeLine(codResta, 0);
+
+                } catch (IOException e ){
+                    e.printStackTrace();
+                }
+                // hago DO, variable, eax
+                RS_DO newDO = new RS_DO("variable", "eax");
+                pilaSemantica.push(newDO);
+            } else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("variable")){
+                try{
+                    // push ebx
+                    writeLine("push ebx", 0);
+
+                    // mov eax, dword [var]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(do_uno.valor);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // mov ebx, dword [var2]
+                    codMov = "mov ebx, dword [";
+                    codMov = codMov.concat(do_dos.valor);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // sub eax, num
+                    String codResta = "add eax, ebx";
+                    writeLine(codResta, 0);
+
+                    writeLine("pop ebx", 0);
+
+                } catch (IOException e ){
+                    e.printStackTrace();
+                }
+                // hago DO, variable, eax
+                RS_DO newDO = new RS_DO("variable", "eax");
+                pilaSemantica.push(newDO);
+            }else{
                 // generar codigo asm de la operacion
                 //Crear un registro DO
             }
@@ -1712,11 +1811,78 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             // verificar que el tipo concuerde en ambos lados
             RS_DO do_dos = (RS_DO) pilaSemantica.pop();
             if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("constante_numerico")){
-                String resultado = String.valueOf(Integer.parseInt(do_uno.valor) - Integer.parseInt(do_dos.valor));
+                String resultado = String.valueOf(Integer.parseInt(do_dos.valor) - Integer.parseInt(do_uno.valor));
                 RS_DO newDO = new RS_DO("constante_numerico", resultado);
                 pilaSemantica.push(newDO);
-            }
-            else{
+            } else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("constante_numerico")){
+                try{
+                    // mov eax, dword [var]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(do_uno.valor);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // sub eax, num
+                    String codResta = "sub eax, ";
+                    codResta = codResta.concat(do_dos.valor);
+                    writeLine(codResta, 0);
+
+                } catch (IOException e ){
+                    e.printStackTrace();
+                }
+                // hago DO, variable, eax
+                RS_DO newDO = new RS_DO("variable", "eax");
+                pilaSemantica.push(newDO);
+
+            } else if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("variable")){
+                try{
+                    // mov eax, dword [var]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(do_dos.valor);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // sub eax, num
+                    String codResta = "sub eax, ";
+                    codResta = codResta.concat(do_uno.valor);
+                    writeLine(codResta, 0);
+
+                } catch (IOException e ){
+                    e.printStackTrace();
+                }
+                // hago DO, variable, eax
+                RS_DO newDO = new RS_DO("variable", "eax");
+                pilaSemantica.push(newDO);
+            } else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("variable")){
+                try{
+                    // push ebx
+                    writeLine("push ebx", 0);
+
+                    // mov eax, dword [var]
+                    String codMov = "mov eax, dword [";
+                    codMov = codMov.concat(do_uno.valor);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // mov ebx, dword [var2]
+                    codMov = "mov ebx, dword [";
+                    codMov = codMov.concat(do_dos.valor);
+                    codMov = codMov.concat("]");
+                    writeLine(codMov, 0);
+
+                    // sub eax, num
+                    String codResta = "sub eax, ebx";
+                    writeLine(codResta, 0);
+
+                    writeLine("pop ebx", 0);
+
+                } catch (IOException e ){
+                    e.printStackTrace();
+                }
+                // hago DO, variable, eax
+                RS_DO newDO = new RS_DO("variable", "eax");
+                pilaSemantica.push(newDO);
+            }else{
                 // generar codigo asm de la operacion
                 //Crear un registro DO
             }
