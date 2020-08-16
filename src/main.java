@@ -60,6 +60,8 @@ public class main {
         try {
             File file = new File(
                     "/media/bryan/Disco 1/Documentos/Ingeniería en computación/Semestre V/Compiladores/Proyectos/Proyecto 3/codigo/Compiladores-Semantico/src/Analizadores/pruebas/PruebaBasica.txt");
+            // File file = new File(
+            // "C://Users//alfon//Documents//Compiladores-Semantico//src//Analizadores//pruebas//PruebaBasica.txt");
             String nombreArchivoFuente = file.getName();
             String[] fileSplit = nombreArchivoFuente.split("\\.");
             String nombreSalida = fileSplit[0];

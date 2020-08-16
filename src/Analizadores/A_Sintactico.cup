@@ -180,7 +180,7 @@ parser code
 
         if(do_op.operador.equals("=")){
             // verificar que el tipo concuerde en ambos lados
-            RS_IDENT do_dos = (RS_IDENT) pilaSemantica.pop();
+            RS_DO do_dos = (RS_DO) pilaSemantica.pop();
 
 
 
@@ -485,7 +485,7 @@ EXP_P ::= punto ident EXP_P_S
         | EXP_P_S;
 
 //caso funcion | Caso operacion aritmetica | Caso operacion booleana
-EXP_P_S ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
+EXP_P_S ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL:op {:recuerdaOperador(op);:} PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
 
 //caso funcion | Caso operacion aritmetica | Caso operacion booleana
 EXP_PP ::= punto ident EXP_PPP;
@@ -497,7 +497,7 @@ FUNC_CALL_CASE ::= FS_EXP FUNC_CALL_CASE_P | C_Parent_R;
 FUNC_CALL_CASE_P ::= coma FUNC_CALL_CASE | C_Parent_R ;
 
 /*------------------- Operaciones aritmeticas -----------------------*///NO TIENE PUNTO Y COMA
-OP_ARIT ::= numero OP_ARIT_P 
+OP_ARIT ::= numero:num {:recuerdaConstante(num, "constante_numerico");:} OP_ARIT_P 
             | ident:id {:recuerdaVariable(id);:} OP_ARIT_A 
             | thisSoli punto ident OP_ARIT_A 
             | numero:num {:recuerdaConstante(num, "constante_numerico"); evalBinary();:};

@@ -8,13 +8,13 @@ contract nombreContrato{
     uint b;
     string s;
     bytes2 bbb;
-    uint b = 3 + 2;
+    //uint b = 3 + 2;
 
 	function fi(int x, int y) returns (int a ) { 
         if (x < 3) {
-            c = c + 1;
+            a = 2;
         } else {
-            c = c + 2;
+            c = 2;
         }
         return a;
     }
