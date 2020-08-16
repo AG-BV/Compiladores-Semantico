@@ -10,7 +10,7 @@ public abstract class RegistroSemantico {
     // más sencillo de buscar
     // por tipo en la pila semántica
     public static enum Value {
-        TIPO, ACCESS, IDENT, DO, OPERADOR
+        TIPO, ACCESS, IDENT, DO, OPERADOR, IF, WHILE
     }
 
     public Value getValueType() {

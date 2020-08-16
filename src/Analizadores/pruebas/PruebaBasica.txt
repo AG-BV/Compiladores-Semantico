@@ -13,9 +13,19 @@ contract nombreContrato{
 	function fi(int x, int y) returns (int a ) { 
         if (3 < 3) {
             a = 2;
+            if (a > 3) {
+                b = 3;
+            }
         } else {
-            c = 2;
+            if (a > 3) {
+                b = 3;
+            }
         }
+
+        while (a < 3){
+            a = 3;
+        }
+        
         return a;
     }
     // Una funcion, y en el cuerpo no declaraciones, if while y asignaciones

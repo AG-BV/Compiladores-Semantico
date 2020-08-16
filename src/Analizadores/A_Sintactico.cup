@@ -12,6 +12,7 @@ parser code
     public String resultado="";
     public static String nombreArchivo;
     public FileWriter myWriter;
+    public int contador = 0;
 
     // lista donde se almacenan los errores sintácticos
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
@@ -208,9 +209,6 @@ parser code
                     e.printStackTrace();
                 }
 
-                pilaSemantica.push(do_dos);
-                // dejar un RS_IDENT en la pila
-                // dejar un RS_DO en la pila
             }
 
             // Generar un DO
@@ -591,32 +589,111 @@ parser code
     }
 
     public void startIf(){
-        RS_IF new_IF = new RS_IF("Else_label:", "Exit_label:");
+        try{
+            writeLine(";----------IF---------", 0);
+        } catch(IOException e ){
+            e.printStackTrace();
+        }
+        String elseLabel = "Else_label_";
+        elseLabel = elseLabel.concat(String.valueOf(contador));
+
+        String exitLabel = "Exit_label_";
+        exitLabel = exitLabel.concat(String.valueOf(contador));
+
+        RS_IF new_IF = new RS_IF(elseLabel, exitLabel);
+
+        contador++;
         pilaSemantica.push(new_IF);
     }
 
     public void testIf(){
+        RS_IF rs = (RS_IF) pilaSemantica.pop();
 
+        String elseLabel = rs.else_label;
+        try{
+            writeLine(elseLabel, 0);
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+        pilaSemantica.push(rs);
     }
 
     public void startElse(){
-
+        RS_IF rs = (RS_IF) pilaSemantica.pop();
+        String exitLabel = rs.exit_label;
+        String elseLabel = rs.else_label;
+        try{
+            // jump exitLabel
+            writeLine("jump", 1);
+            writeLine(exitLabel, 0);
+            // elseLabel:
+            writeLine(elseLabel, 1);
+            writeLine(":", 0);
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+        pilaSemantica.push(rs);
+        
     }
 
     public void endIf(){
-
+        RS_IF rs = (RS_IF) pilaSemantica.pop();
+        String exitLabel = rs.exit_label;
+        try{
+            // exitlabel:
+            writeLine(exitLabel, 1);
+            writeLine(":", 0);
+            writeLine(";-------Fin if-------", 0);
+        } catch(IOException e){
+            e.printStackTrace();
+        }
     }
 
     public void startWhile(){
+        String WhileLabel = "While_label_";
+        WhileLabel = WhileLabel.concat(String.valueOf(contador));
 
+        String exitLabel = "While_exit_label_";
+        exitLabel = exitLabel.concat(String.valueOf(contador));
+
+        RS_WHILE new_while = new RS_WHILE(WhileLabel, exitLabel);
+
+        try{
+            writeLine(";----------While---------", 0);
+            writeLine(WhileLabel, 1);
+            writeLine(":", 0);
+            
+        } catch(IOException e ){
+            e.printStackTrace();
+        }
+
+        contador++;
+        pilaSemantica.push(new_while);
     }
 
     public void testWhile(){
+        RS_WHILE rs = (RS_WHILE) pilaSemantica.pop();
 
+        String whileExitLabel = rs.exit_label;
+        try{
+            writeLine(whileExitLabel, 0);
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+        pilaSemantica.push(rs);
     }
 
     public void endWhile(){
+        RS_WHILE rs = (RS_WHILE) pilaSemantica.pop();
 
+        String whileExitLabel = rs.exit_label;
+        String whileLabel = rs.while_label;
+        try{
+            writeLine(whileExitLabel, 0);
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+        pilaSemantica.push(rs);
     }
 
     public void finArchivo(){
@@ -663,7 +740,13 @@ parser code
     }
 
     public void inicioArchivo(){
-        System.out.println("Inicio!!!!");
+        try{
+            writeLine("SECTION .text", 0);
+            writeLine("global start", 0);
+            writeLine("start:", 0);
+        } catch(IOException e){
+            e.printStackTrace();
+        }
     }
 
 
@@ -729,7 +812,7 @@ STRUCTURE_VAR ::= TIPO VAR_ARR VAR_ACCESS ident punto_coma STRUCTURE_VAR | ;
 STRU ::= STRU_WHILE | STRU_FOR | STRU_DO_WHILE | STRU_IF;
 
 /*--------------------------- While ---------------------------------*/
-STRU_WHILE ::= whileSoli {: startWhile(); :} O_Parent_R OP_BOOL C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :} | whileSoli  error C_Parent_L; // aqui se agrego ----------
+STRU_WHILE ::= whileSoli {: startWhile(); :} O_Parent_R OP_BOOL {:evalBinary();:} C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :} | whileSoli  error C_Parent_L; // aqui se agrego ----------
 
 /*---------------------------- For ----------------------------------*/
 STRU_FOR ::= forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L ; // aqui se agrego ----------
@@ -762,7 +845,7 @@ BODY_SENT ::= ident:id {:recuerdaVariable(id);:} BODY_SENT_P | thisSoli punto id
 
 BODY_SENT_P ::= punto ident BODY_SENT_PP| BODY_SENT_PP;
 BODY_SENT_PP ::= BODY_ASSIGN | BODY_FUN_CALL | igual O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto EXP punto_coma;
-STRU_IF_ELSE_IN ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE_IN ;
+STRU_IF_ELSE_IN ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL {:evalBinary();:} C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE_IN ;
 STRU_ELSE_IN ::= elseSoli {: startElse(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endIf(); :} | {: endIf(); :};
 
 // BODY_WHILE ::= BODY_SENT BODY_WHILE | epsilon;
