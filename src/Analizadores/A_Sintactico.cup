@@ -1,16 +1,33 @@
 package Analizadores;
 import java_cup.runtime.Symbol;
 import java.util.LinkedList;
+import java.io.File; // Import the File class
+import java.io.FileNotFoundException; // Import this class to handle errors
+import java.util.Scanner; // Import the Scanner class to read text files
+import java.io.FileWriter; // Import the FileWriter class
+import java.io.IOException;
 
 parser code
 {:
     public String resultado="";
+    public static String nombreArchivo;
+    public FileWriter myWriter;
 
     // lista donde se almacenan los errores sintácticos
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
     public static LinkedList<Simbolo> tablaSimbolos = new LinkedList<Simbolo>();
+
+    public void writeLine(final String pData, final int flag) throws IOException {
+        if (flag == 0) {
+            myWriter.write(pData + "\n");
+        } else {
+            myWriter.write(pData + " ");
+        }
+        myWriter.flush();
+    }
+
 
     //Metodo al que se llama automaticamente ante algun error sintactico
     public void syntax_error(Symbol s)
@@ -152,6 +169,9 @@ parser code
 
     public void evalBinary(){
 
+        for(RegistroSemantico r : pilaSemantica){
+            r.printDatos();
+        }
         RS_DO do_uno = (RS_DO) pilaSemantica.pop();
         RS_Operador do_op = (RS_Operador) pilaSemantica.pop();
         // El RS siguiente se obtiene después para evitar problemas de tipo
@@ -194,6 +214,46 @@ parser code
             }
             // Generar un DO
             // hacer push del DO
+        } else if (do_op.operador.equals("<") || do_op.operador.equals("<=") || do_op.operador.equals(">") || do_op.operador.equals(">=") || do_op.operador.equals("==") || do_op.operador.equals("!=")) {
+            RS_DO do_dos = (RS_DO) pilaSemantica.pop();
+            if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("constante_numerico")){
+                String resultado = String.valueOf(Integer.parseInt(do_uno.valor) - Integer.parseInt(do_dos.valor));
+                RS_DO newDO = new RS_DO("constante_numerico", resultado);
+                pilaSemantica.push(newDO);
+            }
+            else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("constante_numerico")){
+                // generar codigo asm de la operacion
+                String nombreVar = do_uno.valor;
+                int operando = Integer.parseInt(do_dos.valor);
+                String op = do_op.operador;
+
+                String codResta = "sub dword [";
+                codResta = codResta.concat(nombreVar);
+                codResta = codResta.concat("] ,");
+                codResta = codResta.concat(do_dos.valor);
+                try{
+                    writeLine(codResta, 0);
+                    String codCmp = "";
+                    switch(op){
+                        case "<":
+                            break;
+                        case "<=":
+                            break;
+                        case ">":
+                            break;
+                        case ">=":
+                            break;
+                        case "==":
+                            break;
+                        case "!=":
+                            break;
+                    }
+                } catch(IOException e){
+                    e.printStackTrace();
+                }
+                //Crear un registro DO
+            }
+
         } else {
             // verificar que el tipo concuerde en ambos lados
             RS_DO do_dos = (RS_DO) pilaSemantica.pop();
@@ -230,6 +290,55 @@ parser code
     public void endWhile(){
 
     }
+
+    public void finArchivo(){
+        try{
+            writeLine("SECTION .bss", 0);
+            for(Simbolo s : tablaSimbolos){
+                
+                if(s.tipoSimbolo.equals("variable")){
+                    SimboloVariable var = (SimboloVariable) s;
+                    writeLine(var.nombre, 1);
+                    writeLine("resb", 1);
+                    String tipo = var.tipoVariable;
+                    switch(tipo){
+                        case "int": 
+                            writeLine("4", 0);
+                            break;
+                        case "string": 
+                            writeLine("2", 0);
+                            break;
+                        case "uint":
+                            writeLine("4", 0);
+                            break;
+                        case "bytes":
+                            writeLine("1", 0);
+                            break;
+                        case "bytes1":
+                            writeLine("1", 0);
+                            break;
+                        case "bytes2":
+                            writeLine("2", 0);
+                            break;
+                        case "bytes3":
+                            writeLine("3", 0);
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            }
+        } catch(IOException e ){
+            e.printStackTrace();
+        }
+    }
+
+    public void inicioArchivo(){
+        System.out.println("Inicio!!!!");
+    }
+
+
 :}
 
 //------> Codigo para las acciones gramaticales
@@ -242,7 +351,7 @@ action code
 terminal String pragma, solidity, techo, contract, O_Parent_L, C_Parent_L,enumSoli, punto_coma, coma, bool, byteSoli, bytes, uint, uint_O, uint_DS, uint_TD, uint_SC, uint_CVO, uint_DCS, intSoli, int_O, int_DS, int_TD, int_SC, int_CVO, int_DCS, address, address_payable, O_Parent_C, C_Parent_C, publicSoli, privateSoli, igual, trueSoli, falseSoli, igual_igual , mayor_igual , mayor , menor_igual , menor , diferente , op_or , op_and , negacion, mas , menos , div , por , O_Parent_R , C_Parent_R , porcentaje , mas_igual , menos_igual , por_igual , div_igual, punto, thisSoli, whileSoli, returnSoli, breakSoli, continueSoli, forSoli, doSoli, ifSoli, elseSoli, interrogacion_C, punto_punto, structSoli, functionSoli, payableSoli, internalSoli, returns, charss, string, ufixedSoli, ident, numero,numero_HEX,stringSoli, B_I , B_II , B_III , B_IV , B_V , B_VI , B_VII , B_IIX , B_IX , B_X , B_XI , B_XII , B_XIII , B_XIV , B_XV , B_XVI , B_XVII , B_XIIX , B_XIX , B_XX , B_XXI , B_XXII , B_XXIII , B_XXIV , B_XXV , B_XXVI , B_XXVII , B_XXIIX , B_XXIX , B_XXX , B_XXXI , B_XXXII;
 
 //------> declaracion de no terminales
-non terminal String INICIO, BODY_CONTRACT, BODY_CONTRACT_P, BODY_CONTRACT_PP, BODY_CONTRACT_PPP, EN, STRU, FUNC, EN_IDENT, TIPO, VAR_ARR, VAR_ACCESS, VAR_CONTRACT, VAR_CONTRACT_C, EXP, OP_ARIT, OP,OP_BOOL,OP_OP_BOOL, OP_ARIT_P, OP_BOOL_P,FUNC_CALL_PARAMS,FUNC_CALL_PARAMS_P,BODY_LIT_TF, VAR_CONTRACT_P, STRU_WHILE, BODY_SENT, BODY_ASSIGN, BODY_SENT_P, BODY_FUN_CALL, BODY_SENT_M, STRU_FOR, FOR_VAR, STRU_DO_WHILE, STRU_IF, STRU_ELSE, STRU_IF_LINE, STRUCTURE, STRUCTURE_VAR, STRU_IF_ELSE_IN, STRU_ELSE_IN, CUERPO, FUNC_PARAM, FUNC_MOD, FUNC_RETURNS, CUERPO_M, ASSIGN_NOT_VAR, BODY_SENT_PP, CUERPO_P, EXP_P, EXP_PP, EXP_PPP, OP_EXCL, BOOL_GATE, FUNC_CALL_CASE, FUNC_CALL_CASE_P, ARIT_GATE, EXP_P_S, INICIO_S, CUERPO_MA, CUERPO_ASSIGN_F, CUERPO_ASSIGN_FP, F_EXP,F_EXP_P, F_EXP_PP, F_BODY_LIT_TF, F_ARIT_GATE, F_OP_ARIT_P, F_EXP_P_S, F_FUNC_CALL_CASE, F_OP_ARIT, F_EXP_PPP, F_FUNC_CALL_CASE_P, F_OP_ARIT_Parent, F_OP , NEGADO, OP_BOOL_N, FS_EXP,FS_EXP_P, FS_EXP_PP, FS_BODY_LIT_TF, FS_ARIT_GATE, FS_EXP_P_S, FS_EXP_PPP, FS_OP, FS_BOOL_GATE, FS_OP_BOOL_P, FS_OP_OP_BOOL, FS_OP_BOOL , PARENT_S, OP_ARIT_A, FS_OP_BOOL_F, PCLASS;
+non terminal String INICIO_INICIO, INICIO, BODY_CONTRACT, BODY_CONTRACT_P, BODY_CONTRACT_PP, BODY_CONTRACT_PPP, EN, STRU, FUNC, EN_IDENT, TIPO, VAR_ARR, VAR_ACCESS, VAR_CONTRACT, VAR_CONTRACT_C, EXP, OP_ARIT, OP,OP_BOOL,OP_OP_BOOL, OP_ARIT_P, OP_BOOL_P,FUNC_CALL_PARAMS,FUNC_CALL_PARAMS_P,BODY_LIT_TF, VAR_CONTRACT_P, STRU_WHILE, BODY_SENT, BODY_ASSIGN, BODY_SENT_P, BODY_FUN_CALL, BODY_SENT_M, STRU_FOR, FOR_VAR, STRU_DO_WHILE, STRU_IF, STRU_ELSE, STRU_IF_LINE, STRUCTURE, STRUCTURE_VAR, STRU_IF_ELSE_IN, STRU_ELSE_IN, CUERPO, FUNC_PARAM, FUNC_MOD, FUNC_RETURNS, CUERPO_M, ASSIGN_NOT_VAR, BODY_SENT_PP, CUERPO_P, EXP_P, EXP_PP, EXP_PPP, OP_EXCL, BOOL_GATE, FUNC_CALL_CASE, FUNC_CALL_CASE_P, ARIT_GATE, EXP_P_S, INICIO_S, CUERPO_MA, CUERPO_ASSIGN_F, CUERPO_ASSIGN_FP, F_EXP,F_EXP_P, F_EXP_PP, F_BODY_LIT_TF, F_ARIT_GATE, F_OP_ARIT_P, F_EXP_P_S, F_FUNC_CALL_CASE, F_OP_ARIT, F_EXP_PPP, F_FUNC_CALL_CASE_P, F_OP_ARIT_Parent, F_OP , NEGADO, OP_BOOL_N, FS_EXP,FS_EXP_P, FS_EXP_PP, FS_BODY_LIT_TF, FS_ARIT_GATE, FS_EXP_P_S, FS_EXP_PPP, FS_OP, FS_BOOL_GATE, FS_OP_BOOL_P, FS_OP_OP_BOOL, FS_OP_BOOL , PARENT_S, OP_ARIT_A, FS_OP_BOOL_F, PCLASS;
 
 precedence left porcentaje, mas_igual, por_igual, div_igual, menos_igual;
 precedence nonassoc C_Parent_R;
@@ -250,12 +359,13 @@ precedence left  mas, menos;
 precedence left  por, div;
 // precedence left O_Parent_R;
 
-start with INICIO;
+start with INICIO_INICIO;
 
 /*--------------------- Reglas Semanticas ---------------------------*/
 // INICIO ::= pragma solidity techo numero numero punto_coma INICIO_P;
 
 /* Si se coloca errores aquí se omiten todos los errores porsteriores*/
+INICIO_INICIO ::= {:inicioArchivo();:} INICIO {:finArchivo();:};
 INICIO ::= pragma solidity techo numero numero punto_coma contract ident O_Parent_L BODY_CONTRACT C_Parent_L INICIO_S ;
 INICIO_S ::= contract ident O_Parent_L BODY_CONTRACT C_Parent_L INICIO_S |  ;
 
@@ -300,7 +410,7 @@ STRU_FOR ::= forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Pa
 STRU_DO_WHILE ::= doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma ; // aqui se agrego ----------
 
 /*---------------------------- if -----------------------------------*/
-STRU_IF ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
+STRU_IF ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL {:evalBinary();:} C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
 
 /*--------------------------- else ----------------------------------*/
 STRU_ELSE ::= elseSoli {: startElse(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endIf(); :} | elseSoli error C_Parent_L | {: endIf(); :} ; // Aqui se agrego ---------
@@ -406,7 +516,7 @@ OP_EXCL ::= mas:op_op {:RESULT = op_op;:} | menos:op_op {:RESULT = op_op;:} | di
 
 /*-------------------- Operaciones booleanas ------------------------*///NO TIENE PUNTO Y COMA
 OP_BOOL ::= NEGADO OP_BOOL_N;
-OP_BOOL_N ::= trueSoli OP_BOOL_P | falseSoli OP_BOOL_P | ident:id {: recuerdaVariable(id); :} OP_BOOL_P | numero:num {: recuerdaConstante(num, "constante_numerico"); :} OP_BOOL_P;
+OP_BOOL_N ::= trueSoli:bool {:recuerdaConstante(bool, "constante_booleana");:} OP_BOOL_P | falseSoli:bool{:recuerdaConstante(bool, "constante_booleana");:} OP_BOOL_P | ident:id {: recuerdaVariable(id); :} OP_BOOL_P | numero:num {: recuerdaConstante(num, "constante_numerico"); :} OP_BOOL_P;
 OP_BOOL_P ::= OP_OP_BOOL:op_b {: recuerdaOperador(op_b); :} OP_BOOL | ;
 
 OP_OP_BOOL ::= igual_igual:op_bool {: RESULT=op_bool; :} | mayor_igual:op_bool {: RESULT=op_bool; :} | mayor:op_bool {: RESULT=op_bool; :} | menor_igual:op_bool {: RESULT=op_bool; :} | menor:op_bool {: RESULT=op_bool; :} | diferente:op_bool {: RESULT=op_bool; :} | op_or | op_and;

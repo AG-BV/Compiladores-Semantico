@@ -4,10 +4,20 @@ contract nombreContrato{
 
     // Declaraciones y pueden tener asignaciones
     int c;
-    int c;
     int a;
+    uint b;
+    string s;
+    bytes2 bbb;
     uint b = 3 + 2;
 
+	function fi(int x, int y) returns (int a ) { 
+        if (x < 3) {
+            c = c + 1;
+        } else {
+            c = c + 2;
+        }
+        return a;
+    }
     // Una funcion, y en el cuerpo no declaraciones, if while y asignaciones
 
 } //cierra contrato

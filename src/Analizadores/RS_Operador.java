@@ -7,4 +7,12 @@ public class RS_Operador extends RegistroSemantico {
         this.valueType = Value.OPERADOR;
         this.operador = pOperador;
     }
+
+    @Override
+    public void printDatos() {
+        System.out.print("Tipo: \t");
+        System.out.print(this.valueType);
+        System.out.print("\tValor: \t");
+        System.out.println(this.operador);
+    }
 }

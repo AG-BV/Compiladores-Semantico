@@ -7,4 +7,12 @@ public class RS_ACCESS extends RegistroSemantico {
         this.access = access;
         this.valueType = Value.ACCESS;
     }
+
+    @Override
+    public void printDatos() {
+        System.out.print("Tipo: \t");
+        System.out.print(this.valueType);
+        System.out.print("\tValor: \t");
+        System.out.println(this.access);
+    }
 }

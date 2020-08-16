@@ -3,7 +3,7 @@ package Analizadores;
 /**
  * RegistroSemantico
  */
-public class RegistroSemantico {
+public abstract class RegistroSemantico {
     public Value valueType;
 
     // Enum para tener los tipos de registros semánticos posibles de manera que sea
@@ -16,4 +16,6 @@ public class RegistroSemantico {
     public Value getValueType() {
         return this.valueType;
     }
+
+    public abstract void printDatos();
 }
