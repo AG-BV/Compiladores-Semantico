@@ -6,7 +6,7 @@ contract nombreContrato{
     int c;
     int c;
     int a;
-    uint b = 3;
+    uint b = 3 + 2;
 
     // Una funcion, y en el cuerpo no declaraciones, if while y asignaciones
 

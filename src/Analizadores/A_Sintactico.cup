@@ -96,7 +96,7 @@ parser code
     }
     public void insertarTablaSimbolosAsignacion(){
 
-        RS_DO do = (RS_DO)pilaSemantica.pop();
+        RS_DO dop = (RS_DO)pilaSemantica.pop();
         RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
         RegistroSemantico sig = pilaSemantica.pop();
         SimboloVariable var = new SimboloVariable();
@@ -136,13 +136,13 @@ parser code
     }
 
     public void recuerdaConstante(String pConst, String pTipo){
-        RS_DO do = new RS_DO(pTipo, pConst);
-        pilaSemantica.push(do);
+        RS_DO dop = new RS_DO(pTipo, pConst);
+        pilaSemantica.push(dop);
     }
 
     public void recuerdaVariable(String pConst){
-        RS_DO do = new RS_DO("variable", pConst);
-        pilaSemantica.push(do);
+        RS_DO dop = new RS_DO("variable", pConst);
+        pilaSemantica.push(dop);
     }
 
     public void recuerdaOperador(String pOperador){
@@ -153,7 +153,7 @@ parser code
     public void evalBinary(){
 
         RS_DO do_uno = (RS_DO) pilaSemantica.pop();
-        RS_DO do_op = (RS_Operador) pilaSemantica.pop();
+        RS_Operador do_op = (RS_Operador) pilaSemantica.pop();
         // El RS siguiente se obtiene después para evitar problemas de tipo
         // en caso de que el operador se igual ya que a la izq del igual
         // viene un RS_IDENT y no un RS_DO
@@ -161,12 +161,37 @@ parser code
         if(do_op.operador.equals("=")){
             // verificar que el tipo concuerde en ambos lados
             RS_IDENT do_dos = (RS_IDENT) pilaSemantica.pop();
-            
+
+
+
             // Generar un DO
             // hacer push del DO
-        } else if(do_op.operador.equals("+") || do_op.operador.equals("-")){
+        } else if(do_op.operador.equals("+")){
             // verificar que el tipo concuerde en ambos lados
             RS_DO do_dos = (RS_DO) pilaSemantica.pop();
+            if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("constante_numerico")){
+                String resultado = String.valueOf(Integer.parseInt(do_uno.valor) + Integer.parseInt(do_dos.valor));
+                RS_DO newDO = new RS_DO("constante_numerico", resultado);
+                pilaSemantica.push(newDO);
+            }
+            else{
+                // generar codigo asm de la operacion
+                //Crear un registro DO
+            }
+            // Generar un DO
+            // hacer push del DO
+        } else if(do_op.operador.equals("-")){
+            // verificar que el tipo concuerde en ambos lados
+            RS_DO do_dos = (RS_DO) pilaSemantica.pop();
+            if(do_uno.tipo.equals("constante_numerico") & do_dos.tipo.equals("constante_numerico")){
+                String resultado = String.valueOf(Integer.parseInt(do_uno.valor) - Integer.parseInt(do_dos.valor));
+                RS_DO newDO = new RS_DO("constante_numerico", resultado);
+                pilaSemantica.push(newDO);
+            }
+            else{
+                // generar codigo asm de la operacion
+                //Crear un registro DO
+            }
             // Generar un DO
             // hacer push del DO
         } else {
@@ -175,6 +200,35 @@ parser code
             // Generar un DO
             // hacer push del DO
         }
+    }
+
+    public void startIf(){
+        RS_IF new_IF = new RS_IF("Else_label:", "Exit_label:");
+        pilaSemantica.push(new_IF);
+    }
+
+    public void testIf(){
+
+    }
+
+    public void startElse(){
+
+    }
+
+    public void endIf(){
+
+    }
+
+    public void startWhile(){
+
+    }
+
+    public void testWhile(){
+
+    }
+
+    public void endWhile(){
+
     }
 :}
 
@@ -220,7 +274,8 @@ FUNC_RETURNS ::= returns O_Parent_R TIPO ident C_Parent_R | ;
 /* Revisar declaraciones con tipo en cuerpo de funcion*/
 CUERPO_M ::= CUERPO_MA CUERPO_M | ;
 CUERPO_MA ::= TIPO VAR_ARR VAR_ACCESS ident CUERPO_ASSIGN_F | CUERPO ;
-CUERPO ::= ident igual CUERPO_P | ident punto ident igual CUERPO_P | EXP punto_coma | O_Parent_R FUNC_CALL_PARAMS punto_coma | STRU;
+// CUERPO ::= ident igual CUERPO_P | ident punto ident igual CUERPO_P | EXP punto_coma | O_Parent_R FUNC_CALL_PARAMS punto_coma | STRU;
+CUERPO ::= ident:id {:recuerdaVariable(id);:} igual:op_ig {:recuerdaOperador(op_ig);:} CUERPO_P | EXP punto_coma | O_Parent_R FUNC_CALL_PARAMS punto_coma | STRU;
 CUERPO_P ::= ASSIGN_NOT_VAR | STRU_IF_LINE;
 
 /*-------------------- CUERPO ASIGNACIONES --------------------------*/
@@ -236,7 +291,7 @@ STRUCTURE_VAR ::= TIPO VAR_ARR VAR_ACCESS ident punto_coma STRUCTURE_VAR | ;
 STRU ::= STRU_WHILE | STRU_FOR | STRU_DO_WHILE | STRU_IF;
 
 /*--------------------------- While ---------------------------------*/
-STRU_WHILE ::= whileSoli O_Parent_R OP_BOOL C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L | whileSoli  error C_Parent_L; // aqui se agrego ----------
+STRU_WHILE ::= whileSoli {: startWhile(); :} O_Parent_R OP_BOOL C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :} | whileSoli  error C_Parent_L; // aqui se agrego ----------
 
 /*---------------------------- For ----------------------------------*/
 STRU_FOR ::= forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L ; // aqui se agrego ----------
@@ -245,10 +300,10 @@ STRU_FOR ::= forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Pa
 STRU_DO_WHILE ::= doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma ; // aqui se agrego ----------
 
 /*---------------------------- if -----------------------------------*/
-STRU_IF ::= ifSoli O_Parent_R OP_BOOL C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
+STRU_IF ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
 
 /*--------------------------- else ----------------------------------*/
-STRU_ELSE ::= elseSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L | elseSoli error C_Parent_L | ; // Aqui se agrego ---------
+STRU_ELSE ::= elseSoli {: startElse(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endIf(); :} | elseSoli error C_Parent_L | {: endIf(); :} ; // Aqui se agrego ---------
 
 /*-------------------------- If line --------------------------------*/
 STRU_IF_LINE ::= O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto EXP punto_coma 
@@ -258,8 +313,8 @@ STRU_IF_LINE ::= O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto E
 
 /*------------------------- BODY_SENT -------------------------------*////AGREGAR AQUI
 BODY_SENT_M ::= BODY_SENT BODY_SENT_M | ;
-BODY_SENT ::= ident BODY_SENT_P | thisSoli punto ident igual EXP punto_coma
-    | whileSoli O_Parent_R OP_BOOL C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L 
+BODY_SENT ::= ident:id {:recuerdaVariable(id);:} BODY_SENT_P | thisSoli punto ident igual EXP punto_coma
+    | whileSoli {: startWhile(); :} O_Parent_R OP_BOOL C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :}
     | forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L 
     | doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma 
     | STRU_IF_ELSE_IN
@@ -269,18 +324,18 @@ BODY_SENT ::= ident BODY_SENT_P | thisSoli punto ident igual EXP punto_coma
 
 BODY_SENT_P ::= punto ident BODY_SENT_PP| BODY_SENT_PP;
 BODY_SENT_PP ::= BODY_ASSIGN | BODY_FUN_CALL | igual O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto EXP punto_coma;
-STRU_IF_ELSE_IN ::= ifSoli O_Parent_R OP_BOOL C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE_IN ;
-STRU_ELSE_IN ::= elseSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L | ;
+STRU_IF_ELSE_IN ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE_IN ;
+STRU_ELSE_IN ::= elseSoli {: startElse(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endIf(); :} | {: endIf(); :};
 
 // BODY_WHILE ::= BODY_SENT BODY_WHILE | epsilon;
-BODY_ASSIGN ::= igual EXP punto_coma ;
+BODY_ASSIGN ::= igual:op_ig {: recuerdaOperador(op_ig); :} EXP punto_coma {:evalBinary();:} ;
 BODY_FUN_CALL ::= O_Parent_R FUNC_CALL_PARAMS C_Parent_R punto_coma ;
 FOR_VAR ::= ident igual EXP ;
 // IF_LINE_VAR ::= punto ident | ;
 
 FUNC_CALL_PARAMS ::= FS_EXP FUNC_CALL_PARAMS_P | ;
 FUNC_CALL_PARAMS_P ::= coma FS_EXP FUNC_CALL_PARAMS | ;
-ASSIGN_NOT_VAR ::= EXP punto_coma;
+ASSIGN_NOT_VAR ::= EXP punto_coma {: evalBinary(); :};
 //-----------------------------------------------------------------------------revisar igual sr----------------------------------------------//
 /*--------------------------- ENUMS ---------------------------------*///TIENE PUNTO Y COMA
 EN ::= enumSoli ident O_Parent_L ident EN_IDENT C_Parent_L | enumSoli error C_Parent_L ;  // Aque se agrego ----------------------------------------------
@@ -305,7 +360,7 @@ VAR_ACCESS ::= publicSoli:b {: RESULT = b; :}
 
 /*------------------------ Expresiones ------------------------------*/
 /*-------------------- Expresio Principal ---------------------------*/
-EXP ::= ident:ident {:recuerdaVariable(ident);:} EXP_P | thisSoli EXP_PP | BODY_LIT_TF | ARIT_GATE  | BOOL_GATE ;
+EXP ::= ident:id {:recuerdaVariable(id);:} EXP_P | thisSoli EXP_PP | BODY_LIT_TF | ARIT_GATE  | BOOL_GATE ;
 
 //Operacion booleana con true o false de primero
 BOOL_GATE ::= trueSoli OP_BOOL_P 
@@ -351,10 +406,10 @@ OP_EXCL ::= mas:op_op {:RESULT = op_op;:} | menos:op_op {:RESULT = op_op;:} | di
 
 /*-------------------- Operaciones booleanas ------------------------*///NO TIENE PUNTO Y COMA
 OP_BOOL ::= NEGADO OP_BOOL_N;
-OP_BOOL_N ::= trueSoli OP_BOOL_P | falseSoli OP_BOOL_P | ident OP_BOOL_P | numero OP_BOOL_P;
-OP_BOOL_P ::= OP_OP_BOOL OP_BOOL | ;
+OP_BOOL_N ::= trueSoli OP_BOOL_P | falseSoli OP_BOOL_P | ident:id {: recuerdaVariable(id); :} OP_BOOL_P | numero:num {: recuerdaConstante(num, "constante_numerico"); :} OP_BOOL_P;
+OP_BOOL_P ::= OP_OP_BOOL:op_b {: recuerdaOperador(op_b); :} OP_BOOL | ;
 
-OP_OP_BOOL ::= igual_igual | mayor_igual | mayor | menor_igual | menor | diferente | op_or | op_and;
+OP_OP_BOOL ::= igual_igual:op_bool {: RESULT=op_bool; :} | mayor_igual:op_bool {: RESULT=op_bool; :} | mayor:op_bool {: RESULT=op_bool; :} | menor_igual:op_bool {: RESULT=op_bool; :} | menor:op_bool {: RESULT=op_bool; :} | diferente:op_bool {: RESULT=op_bool; :} | op_or | op_and;
 
 NEGADO ::= negacion | ;
 
