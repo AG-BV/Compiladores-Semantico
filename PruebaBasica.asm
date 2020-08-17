@@ -10,7 +10,11 @@ push ebp
 mov ebp, esp
 sub esp, 0
 ;----------IF---------
-cmp 3, 3
+push eax
+mov eax, dword [e]
+sub eax, 3
+cmp eax, 0
+pop eax
 jl Else_label_0
 mov dword [a], 2
 ;----------IF---------
@@ -23,6 +27,9 @@ jg Else_label_1
 mov dword [b], 3
 Exit_label_1 :
 ;-------Fin if-------
+mov eax, dword [h]
+sub eax, 3
+mov dword [z], eax
 jump Exit_label_0
 Else_label_0 :
 ;----------IF---------
@@ -55,6 +62,7 @@ pop ebp
 ret
 ;----------Fin funcion------------
 SECTION .bss
+z resb 4
 bbb resb 2
 s resb 2
 b resb 4

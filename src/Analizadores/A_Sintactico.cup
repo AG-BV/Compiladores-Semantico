@@ -20,6 +20,7 @@ parser code
 
     // lista donde se almacenan los errores sintácticos
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
+    public static LinkedList<ErrorSemantico> erroresSemanticos = new LinkedList<ErrorSemantico>();
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
     public static LinkedList<Simbolo> tablaSimbolos = new LinkedList<Simbolo>();
@@ -64,21 +65,22 @@ parser code
 
     /* Metodos para realizar las acciones semánticas*/
 
-    public void recuerdoTipo(String pTipo){
+    public void recuerdoTipo(String pTipo, int lineaPos){
         pilaSemantica.push(new RS_Tipo(pTipo));
     }
 
-    public void recuerdoAccess(String pAcces){
+    public void recuerdoAccess(String pAcces, int lineaPos){
         if(pAcces != null){
             pilaSemantica.push(new RS_ACCESS(pAcces));
         }
     }
 
-    public void recuerdoID(String pIdent){
+    public void recuerdoID(String pIdent, int lineaPos){
         pilaSemantica.push(new RS_IDENT(pIdent));
     }
 
-    public void insertarTablaSimbolos(){
+    // Ya se agregaron los errores
+    public void insertarTablaSimbolos(int lineaPos){
 
         RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
         RegistroSemantico sig = pilaSemantica.pop();
@@ -105,6 +107,10 @@ parser code
             if(sim.nombre.equals(var.nombre)){
                 // Variable ya esta definida dar error
                 //System.out.println("Ya esta en la tabla");
+                String msg = "La variable '";
+                msg = msg.concat(id.ident);
+                msg = msg.concat("' ya se encuentra definida");
+                erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
                 estaEnTabla = true;
             }
         }
@@ -116,7 +122,9 @@ parser code
         }
 
     }
-    public void insertarTablaSimbolosAsignacion(){
+
+    // Ya se agregaron los errores
+    public void insertarTablaSimbolosAsignacion(int lineaPos){
 
         RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
         RegistroSemantico sig = pilaSemantica.pop();
@@ -144,6 +152,10 @@ parser code
             if(sim.nombre.equals(var.nombre)){
                 // Variable ya esta definida dar error
                 //System.out.println("Ya esta en la tabla");
+                String msg = "La variable '";
+                msg = msg.concat(id.ident);
+                msg = msg.concat("' ya se encuentra definida");
+                erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
                 estaEnTabla = true;
             }
         }
@@ -156,31 +168,54 @@ parser code
 
     }
 
-    public void recuerdaConstante(String pConst, String pTipo){
+    public void recuerdaConstante(String pConst, String pTipo, int lineaPos){
         RS_DO dop = new RS_DO(pTipo, pConst);
         pilaSemantica.push(dop);
     }
 
-    public void recuerdaVariable(String pConst){
+    public void recuerdaVariable(String pConst, int lineaPos){
         RS_DO dop = new RS_DO("variable", pConst);
         pilaSemantica.push(dop);
     }
 
-    public void recuerdaOperador(String pOperador){
+    public void recuerdaOperador(String pOperador, int lineaPos){
         RS_Operador op = new RS_Operador(pOperador);
         pilaSemantica.push(op);
     }
 
-    public void evalBinary(){
+    public void evalBinary(int lineaPos){
 
-        for(RegistroSemantico r : pilaSemantica){
-            r.printDatos();
-        }
         RS_DO do_uno = (RS_DO) pilaSemantica.pop();
         RS_Operador do_op = (RS_Operador) pilaSemantica.pop();
         // El RS siguiente se obtiene después para evitar problemas de tipo
         // en caso de que el operador se igual ya que a la izq del igual
         // viene un RS_IDENT y no un RS_DO
+
+        // validar do_uno, puede ser una variable o constante
+        if(do_uno.tipo.equals("variable")){
+            boolean seEncontro = false;
+            for(Simbolo s : tablaSimbolos){
+                if(s.nombre.equals(do_uno.valor)){
+                    // no hay error
+                    seEncontro = true;
+                }
+            }
+            if(!seEncontro){
+                // dar error
+                if(!do_uno.valor.equals("eax")){
+
+                    String msg = "La variable '";
+                    msg = msg.concat(do_uno.valor);
+                    msg = msg.concat("' no se encuentra definida");
+                    erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                    // agregar la variable a la tabla de simbolos
+                    SimboloVariable sv = new SimboloVariable();
+                    sv.nombre = do_uno.valor;
+                    sv.tipoSimbolo = "error";
+                    tablaSimbolos.add(sv);
+                }
+            }
+        }
 
         if(do_op.operador.equals("=")){
             // verificar que el tipo concuerde en ambos lados
@@ -213,6 +248,28 @@ parser code
                     e.printStackTrace();
                 }
 
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
+
             }
 
             // Generar un DO
@@ -241,6 +298,29 @@ parser code
                 } catch (IOException e ){
                     e.printStackTrace();
                 }
+
+
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
                 pilaSemantica.push(newDO);
@@ -260,6 +340,27 @@ parser code
 
                 } catch (IOException e ){
                     e.printStackTrace();
+                }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
@@ -289,6 +390,49 @@ parser code
 
                 } catch (IOException e ){
                     e.printStackTrace();
+                }
+
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
@@ -322,6 +466,27 @@ parser code
                 } catch (IOException e ){
                     e.printStackTrace();
                 }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
                 pilaSemantica.push(newDO);
@@ -341,6 +506,27 @@ parser code
 
                 } catch (IOException e ){
                     e.printStackTrace();
+                }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
@@ -370,6 +556,48 @@ parser code
 
                 } catch (IOException e ){
                     e.printStackTrace();
+                }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
@@ -468,6 +696,27 @@ parser code
                 } catch(IOException e){
                     e.printStackTrace();
                 }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
                 //Crear un registro DO
             }
             else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("constante_numerico")){
@@ -520,6 +769,27 @@ parser code
                     }
                 } catch(IOException e){
                     e.printStackTrace();
+                }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 //Crear un registro DO
             }
@@ -580,6 +850,48 @@ parser code
                     }
                 } catch(IOException e){
                     e.printStackTrace();
+                }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 //Crear un registro DO
             }
@@ -759,7 +1071,7 @@ parser code
     public void funcStart(){
         sFuncion = new SimboloFuncion();
     }
-    public void recuerdaFuncId(String pId){
+    public void recuerdaFuncId(String pId, int lineaPos){
         try{
             sFuncion.nombre = pId;
             writeLine(";----------Inicio funcion------------", 0);
@@ -776,7 +1088,7 @@ parser code
         RS_Tipo rsTipo = new RS_Tipo(pTipo);
         pilaSemantica.push(rsTipo);
     }
-    public void recuerdaIdentParam(String pIdent){
+    public void recuerdaIdentParam(String pIdent, int lineaPos){
         RS_Tipo rsTipo = (RS_Tipo) pilaSemantica.pop();
         ParametroFuncion pf = new ParametroFuncion(rsTipo.tipo, pIdent, String.valueOf(offsetParam));
         sFuncion.listaParametros.add(pf);
@@ -824,7 +1136,7 @@ parser code
         sFuncion.retornoVariable = pf;
         returnEnDeclaracion = true;
     }
-    public void retornoFuncion(){
+    public void retornoFuncion(int lineaPos){
         retornEncontrado = true;
         RS_DO retorno = (RS_DO) pilaSemantica.pop();
         try{
@@ -844,7 +1156,7 @@ parser code
         pilaSemantica.push(rsDo);
 
     }
-    public void funcEnd(){
+    public void funcEnd(int lineaPos){
         try{
             writeLine("mov esp, ebp", 0);
             writeLine("pop ebp", 0);
@@ -858,6 +1170,8 @@ parser code
         // validar que si se indico return en la declaracion, tuve que haber venido en el cuerpo
         if(returnEnDeclaracion == true && retornEncontrado == false){
             //error semántico
+            ErrorSemantico err = new ErrorSemantico(lineaPos, "Error en el retorno de la funcion");
+            erroresSemanticos.add(err);
         }
 
     }
@@ -898,18 +1212,18 @@ BODY_CONTRACT_PP ::= STRUCTURE BODY_CONTRACT_PP | BODY_CONTRACT_PPP;
 BODY_CONTRACT_PPP ::= FUNC BODY_CONTRACT_PPP | ;
 
 /*------------------------- FUNCIONES -------------------------------*/
-FUNC ::= functionSoli {:funcStart();:} ident:funcId {:recuerdaFuncId(funcId);:} O_Parent_R TIPO:paramTipo {:recuerdaTipoParam(paramTipo);:} ident:paramIdent {:recuerdaIdentParam(paramIdent);:} FUNC_PARAM C_Parent_R FUNC_MOD:mod {:recuerdaFuncMod(mod);:} FUNC_RETURNS O_Parent_L CUERPO_M RETURN_P C_Parent_L {:funcEnd();:} | functionSoli error C_Parent_L; // Aqui se agrego ---------
-FUNC_PARAM ::= coma TIPO:paramTipo {:recuerdaTipoParam(paramTipo);:} ident:paramIdent {:recuerdaIdentParam(paramIdent);:} FUNC_PARAM | ;
+FUNC ::= functionSoli {:funcStart();:} ident:funcId {:recuerdaFuncId(funcId, funcIdleft);:} O_Parent_R TIPO:paramTipo {:recuerdaTipoParam(paramTipo);:} ident:paramIdent {:recuerdaIdentParam(paramIdent, paramIdentleft);:} FUNC_PARAM C_Parent_R FUNC_MOD:mod {:recuerdaFuncMod(mod);:} FUNC_RETURNS O_Parent_L CUERPO_M RETURN_P C_Parent_L:ff {:funcEnd(ffleft);:} | functionSoli error C_Parent_L; // Aqui se agrego ---------
+FUNC_PARAM ::= coma TIPO:paramTipo {:recuerdaTipoParam(paramTipo);:} ident:paramIdent {:recuerdaIdentParam(paramIdent, paramIdentleft);:} FUNC_PARAM | ;
 FUNC_MOD ::= payableSoli | privateSoli | publicSoli | internalSoli | ;
 FUNC_RETURNS ::= returns O_Parent_R TIPO:tipoReturn {:recuerdaTipoReturn(tipoReturn);:} ident:identReturn {:recuerdaIdentReturn(identReturn);:} C_Parent_R | ;
-RETURN_P ::= returnSoli EXP {:retornoFuncion();:} punto_coma | ;
+RETURN_P ::= returnSoli EXP:rf {:retornoFuncion(rfleft);:} punto_coma | ;
 
 /*--------------------------- CUERPO --------------------------------*/
 /* Revisar declaraciones con tipo en cuerpo de funcion*/
 CUERPO_M ::= CUERPO_MA CUERPO_M | ;
 CUERPO_MA ::= TIPO VAR_ARR VAR_ACCESS ident CUERPO_ASSIGN_F | CUERPO ;
 // CUERPO ::= ident igual CUERPO_P | ident punto ident igual CUERPO_P | EXP punto_coma | O_Parent_R FUNC_CALL_PARAMS punto_coma | STRU;
-CUERPO ::= ident:id {:recuerdaVariable(id);:} igual:op_ig {:recuerdaOperador(op_ig);:} CUERPO_P | EXP punto_coma | O_Parent_R FUNC_CALL_PARAMS punto_coma | STRU;
+CUERPO ::= ident:id {:recuerdaVariable(id, idleft);:} igual:op_ig {:recuerdaOperador(op_ig, op_igleft);:} CUERPO_P | EXP punto_coma | O_Parent_R FUNC_CALL_PARAMS punto_coma | STRU;
 CUERPO_P ::= ASSIGN_NOT_VAR | STRU_IF_LINE;
 
 /*-------------------- CUERPO ASIGNACIONES --------------------------*/
@@ -925,7 +1239,7 @@ STRUCTURE_VAR ::= TIPO VAR_ARR VAR_ACCESS ident punto_coma STRUCTURE_VAR | ;
 STRU ::= STRU_WHILE | STRU_FOR | STRU_DO_WHILE | STRU_IF;
 
 /*--------------------------- While ---------------------------------*/
-STRU_WHILE ::= whileSoli {: startWhile(); :} O_Parent_R OP_BOOL {:evalBinary();:} C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :} | whileSoli  error C_Parent_L; // aqui se agrego ----------
+STRU_WHILE ::= whileSoli {: startWhile(); :} O_Parent_R OP_BOOL:ev {:evalBinary(evleft);:} C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :} | whileSoli  error C_Parent_L; // aqui se agrego ----------
 
 /*---------------------------- For ----------------------------------*/
 STRU_FOR ::= forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L ; // aqui se agrego ----------
@@ -934,7 +1248,7 @@ STRU_FOR ::= forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Pa
 STRU_DO_WHILE ::= doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma ; // aqui se agrego ----------
 
 /*---------------------------- if -----------------------------------*/
-STRU_IF ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL {:evalBinary();:} C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
+STRU_IF ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL:ev {:evalBinary(evleft);:} C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
 
 /*--------------------------- else ----------------------------------*/
 STRU_ELSE ::= elseSoli {: startElse(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endIf(); :} | elseSoli error C_Parent_L | {: endIf(); :} ; // Aqui se agrego ---------
@@ -947,7 +1261,7 @@ STRU_IF_LINE ::= O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto E
 
 /*------------------------- BODY_SENT -------------------------------*////AGREGAR AQUI
 BODY_SENT_M ::= BODY_SENT BODY_SENT_M | ;
-BODY_SENT ::= ident:id {:recuerdaVariable(id);:} BODY_SENT_P | thisSoli punto ident igual EXP punto_coma
+BODY_SENT ::= ident:id {:recuerdaVariable(id, idleft);:} BODY_SENT_P | thisSoli punto ident igual EXP punto_coma
     | whileSoli {: startWhile(); :} O_Parent_R OP_BOOL C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :}
     | forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L 
     | doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma 
@@ -958,33 +1272,33 @@ BODY_SENT ::= ident:id {:recuerdaVariable(id);:} BODY_SENT_P | thisSoli punto id
 
 BODY_SENT_P ::= punto ident BODY_SENT_PP| BODY_SENT_PP;
 BODY_SENT_PP ::= BODY_ASSIGN | BODY_FUN_CALL | igual O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto EXP punto_coma;
-STRU_IF_ELSE_IN ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL {:evalBinary();:} C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE_IN ;
+STRU_IF_ELSE_IN ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL:ev {:evalBinary(evleft);:} C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE_IN ;
 STRU_ELSE_IN ::= elseSoli {: startElse(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endIf(); :} | {: endIf(); :};
 
 // BODY_WHILE ::= BODY_SENT BODY_WHILE | epsilon;
-BODY_ASSIGN ::= igual:op_ig {: recuerdaOperador(op_ig); :} EXP punto_coma {:evalBinary();:} ;
+BODY_ASSIGN ::= igual:op_ig {: recuerdaOperador(op_ig, op_igleft); :} EXP punto_coma:ev {:evalBinary(evleft);:} ;
 BODY_FUN_CALL ::= O_Parent_R FUNC_CALL_PARAMS C_Parent_R punto_coma ;
 FOR_VAR ::= ident igual EXP ;
 // IF_LINE_VAR ::= punto ident | ;
 
 FUNC_CALL_PARAMS ::= FS_EXP FUNC_CALL_PARAMS_P | ;
 FUNC_CALL_PARAMS_P ::= coma FS_EXP FUNC_CALL_PARAMS | ;
-ASSIGN_NOT_VAR ::= EXP punto_coma {: evalBinary(); :};
+ASSIGN_NOT_VAR ::= EXP punto_coma:ev {: evalBinary(evleft); :};
 //-----------------------------------------------------------------------------revisar igual sr----------------------------------------------//
 /*--------------------------- ENUMS ---------------------------------*///TIENE PUNTO Y COMA
 EN ::= enumSoli ident O_Parent_L ident EN_IDENT C_Parent_L | enumSoli error C_Parent_L ;  // Aque se agrego ----------------------------------------------
 EN_IDENT ::= coma ident EN_IDENT | ;
 
 /*------------------------- VARIABLES -------------------------------*///INCOMPLETA
-VAR_CONTRACT ::= TIPO:inputTipo {: recuerdoTipo(inputTipo); :} VAR_ARR VAR_ACCESS:inputAccess {: recuerdoAccess(inputAccess); :} ident:b {: recuerdoID(b); :} VAR_CONTRACT_P 
+VAR_CONTRACT ::= TIPO:inputTipo {: recuerdoTipo(inputTipo, inputTipoleft); :} VAR_ARR VAR_ACCESS:inputAccess {: recuerdoAccess(inputAccess, inputAccessleft); :} ident:b {: recuerdoID(b, bleft); :} VAR_CONTRACT_P 
                 | TIPO error punto_coma ;// Aque se agrego ----------------------------------------------
 
 /*--------------- 1.A VARIABLES sin asignacion ----------------------*/
-VAR_CONTRACT_P ::= punto_coma {: insertarTablaSimbolos(); :} 
-                | VAR_CONTRACT_C punto_coma {: insertarTablaSimbolosAsignacion(); :};
+VAR_CONTRACT_P ::= punto_coma:i {: insertarTablaSimbolos(ileft); :} 
+                | VAR_CONTRACT_C punto_coma:i {: insertarTablaSimbolosAsignacion(ileft); :};
 
 /*--------------- 1.B VARIABLES con asignacion ----------------------*/
-VAR_CONTRACT_C ::= igual:op_ig {:recuerdaOperador(op_ig);:} EXP {:evalBinary();:} ;///////////////////////Prueba
+VAR_CONTRACT_C ::= igual:op_ig {:recuerdaOperador(op_ig, op_igleft);:} EXP:ev {:evalBinary(evleft);:} ;///////////////////////Prueba
 
 /*----------------- 1.C Estructura Variables ------------------------*/
 VAR_ARR ::= O_Parent_C C_Parent_C | ;
@@ -994,14 +1308,14 @@ VAR_ACCESS ::= publicSoli:b {: RESULT = b; :}
 
 /*------------------------ Expresiones ------------------------------*/
 /*-------------------- Expresio Principal ---------------------------*/
-EXP ::= ident:id {:recuerdaVariable(id);:} EXP_P | thisSoli EXP_PP | BODY_LIT_TF | ARIT_GATE  | BOOL_GATE ;
+EXP ::= ident:id {:recuerdaVariable(id, idleft);:} EXP_P | thisSoli EXP_PP | BODY_LIT_TF | ARIT_GATE  | BOOL_GATE ;
 
 //Operacion booleana con true o false de primero
 BOOL_GATE ::= trueSoli OP_BOOL_P 
             | falseSoli OP_BOOL_P;
 
-ARIT_GATE ::= numero:num {:recuerdaConstante(num, "constante_numerico");:} OP_ARIT_P
-            | numero:num {:recuerdaConstante(num, "constante_numerico");:};
+ARIT_GATE ::= numero:num {:recuerdaConstante(num, "constante_numerico", numleft);:} OP_ARIT_P
+            | numero:num {:recuerdaConstante(num, "constante_numerico", numleft);:};
 
 
 //Filto en caso id.id
@@ -1009,11 +1323,11 @@ EXP_P ::= punto ident EXP_P_S
         | EXP_P_S;
 
 //caso funcion | Caso operacion aritmetica | Caso operacion booleana
-EXP_P_S ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL:op {:recuerdaOperador(op);:} PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
+EXP_P_S ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL:op {:recuerdaOperador(op, opleft);:} PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
 
 //caso funcion | Caso operacion aritmetica | Caso operacion booleana
 EXP_PP ::= punto ident EXP_PPP;
-EXP_PPP ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL:op {:recuerdaOperador(op);:} PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
+EXP_PPP ::= O_Parent_R FUNC_CALL_CASE | OP_EXCL:op {:recuerdaOperador(op, opleft);:} PARENT_S OP_ARIT | OP_OP_BOOL OP_BOOL | ;
 
 /*--------------------- LLamadas a funciones ------------------------*/
 // FUNC_CALL_CASE ::= ident FUNC_CALL_CASE_P | thisSoli punto ident FUNC_CALL_CASE_P | C_Parent_R | EXP;
@@ -1021,14 +1335,14 @@ FUNC_CALL_CASE ::= FS_EXP FUNC_CALL_CASE_P | C_Parent_R;
 FUNC_CALL_CASE_P ::= coma FUNC_CALL_CASE | C_Parent_R ;
 
 /*------------------- Operaciones aritmeticas -----------------------*///NO TIENE PUNTO Y COMA
-OP_ARIT ::= numero:num {:recuerdaConstante(num, "constante_numerico");:} OP_ARIT_P 
-            | ident:id {:recuerdaVariable(id);:} OP_ARIT_A 
+OP_ARIT ::= numero:num {:recuerdaConstante(num, "constante_numerico", numleft);:} OP_ARIT_P 
+            | ident:id {:recuerdaVariable(id, idleft);:} OP_ARIT_A:ev {:evalBinary(evleft);:}
             | thisSoli punto ident OP_ARIT_A 
-            | numero:num {:recuerdaConstante(num, "constante_numerico"); evalBinary();:};
+            | numero:num {:recuerdaConstante(num, "constante_numerico", numleft); evalBinary(numleft);:};
 OP_ARIT_A ::= O_Parent_R FUNC_CALL_CASE 
             | OP_ARIT_P 
-            | {:evalBinary();:};
-OP_ARIT_P ::= OP:op {:recuerdaOperador(op);:} PARENT_S OP_ARIT 
+            | ; // Se quito el evalBinary y se puso en la linea 1025
+OP_ARIT_P ::= OP:op {:recuerdaOperador(op, opleft);:} PARENT_S OP_ARIT 
             | C_Parent_R;
 // OP_ARIT_Parent ::= punto ident | ;
 
@@ -1040,8 +1354,8 @@ OP_EXCL ::= mas:op_op {:RESULT = op_op;:} | menos:op_op {:RESULT = op_op;:} | di
 
 /*-------------------- Operaciones booleanas ------------------------*///NO TIENE PUNTO Y COMA
 OP_BOOL ::= NEGADO OP_BOOL_N;
-OP_BOOL_N ::= trueSoli:bool {:recuerdaConstante(bool, "constante_booleana");:} OP_BOOL_P | falseSoli:bool{:recuerdaConstante(bool, "constante_booleana");:} OP_BOOL_P | ident:id {: recuerdaVariable(id); :} OP_BOOL_P | numero:num {: recuerdaConstante(num, "constante_numerico"); :} OP_BOOL_P;
-OP_BOOL_P ::= OP_OP_BOOL:op_b {: recuerdaOperador(op_b); :} OP_BOOL | ;
+OP_BOOL_N ::= trueSoli:bool {:recuerdaConstante(bool, "constante_booleana", boolleft);:} OP_BOOL_P | falseSoli:bool{:recuerdaConstante(bool, "constante_booleana", boolleft);:} OP_BOOL_P | ident:id {: recuerdaVariable(id, idleft); :} OP_BOOL_P | numero:num {: recuerdaConstante(num, "constante_numerico", numleft); :} OP_BOOL_P;
+OP_BOOL_P ::= OP_OP_BOOL:op_b {: recuerdaOperador(op_b, op_bleft); :} OP_BOOL | ;
 
 OP_OP_BOOL ::= igual_igual:op_bool {: RESULT=op_bool; :} | mayor_igual:op_bool {: RESULT=op_bool; :} | mayor:op_bool {: RESULT=op_bool; :} | menor_igual:op_bool {: RESULT=op_bool; :} | menor:op_bool {: RESULT=op_bool; :} | diferente:op_bool {: RESULT=op_bool; :} | op_or | op_and;
 

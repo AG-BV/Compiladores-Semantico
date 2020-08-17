@@ -5,17 +5,20 @@ contract nombreContrato{
     // Declaraciones y pueden tener asignaciones
     int c;
     int a;
+    int a;
     uint b;
     string s;
     bytes2 bbb;
     uint b = s - 2;
+    int z;
 
 	function fi(int x, int y) returns (int a ) { 
-        if (3 < 3) {
+        if (e < 3) {
             a = 2;
             if (a > 3) {
                 b = 3;
             }
+            z = h -3;
         } else {
             if (a > 3) {
                 b = 3;

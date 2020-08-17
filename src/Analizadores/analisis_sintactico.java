@@ -1552,6 +1552,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
     // lista donde se almacenan los errores sintácticos
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
+    public static LinkedList<ErrorSemantico> erroresSemanticos = new LinkedList<ErrorSemantico>();
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
     public static LinkedList<Simbolo> tablaSimbolos = new LinkedList<Simbolo>();
@@ -1596,21 +1597,22 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
     /* Metodos para realizar las acciones semánticas*/
 
-    public void recuerdoTipo(String pTipo){
+    public void recuerdoTipo(String pTipo, int lineaPos){
         pilaSemantica.push(new RS_Tipo(pTipo));
     }
 
-    public void recuerdoAccess(String pAcces){
+    public void recuerdoAccess(String pAcces, int lineaPos){
         if(pAcces != null){
             pilaSemantica.push(new RS_ACCESS(pAcces));
         }
     }
 
-    public void recuerdoID(String pIdent){
+    public void recuerdoID(String pIdent, int lineaPos){
         pilaSemantica.push(new RS_IDENT(pIdent));
     }
 
-    public void insertarTablaSimbolos(){
+    // Ya se agregaron los errores
+    public void insertarTablaSimbolos(int lineaPos){
 
         RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
         RegistroSemantico sig = pilaSemantica.pop();
@@ -1637,6 +1639,10 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             if(sim.nombre.equals(var.nombre)){
                 // Variable ya esta definida dar error
                 //System.out.println("Ya esta en la tabla");
+                String msg = "La variable '";
+                msg = msg.concat(id.ident);
+                msg = msg.concat("' ya se encuentra definida");
+                erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
                 estaEnTabla = true;
             }
         }
@@ -1648,7 +1654,9 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         }
 
     }
-    public void insertarTablaSimbolosAsignacion(){
+
+    // Ya se agregaron los errores
+    public void insertarTablaSimbolosAsignacion(int lineaPos){
 
         RS_IDENT id = (RS_IDENT)pilaSemantica.pop();
         RegistroSemantico sig = pilaSemantica.pop();
@@ -1676,6 +1684,10 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             if(sim.nombre.equals(var.nombre)){
                 // Variable ya esta definida dar error
                 //System.out.println("Ya esta en la tabla");
+                String msg = "La variable '";
+                msg = msg.concat(id.ident);
+                msg = msg.concat("' ya se encuentra definida");
+                erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
                 estaEnTabla = true;
             }
         }
@@ -1688,31 +1700,54 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
     }
 
-    public void recuerdaConstante(String pConst, String pTipo){
+    public void recuerdaConstante(String pConst, String pTipo, int lineaPos){
         RS_DO dop = new RS_DO(pTipo, pConst);
         pilaSemantica.push(dop);
     }
 
-    public void recuerdaVariable(String pConst){
+    public void recuerdaVariable(String pConst, int lineaPos){
         RS_DO dop = new RS_DO("variable", pConst);
         pilaSemantica.push(dop);
     }
 
-    public void recuerdaOperador(String pOperador){
+    public void recuerdaOperador(String pOperador, int lineaPos){
         RS_Operador op = new RS_Operador(pOperador);
         pilaSemantica.push(op);
     }
 
-    public void evalBinary(){
+    public void evalBinary(int lineaPos){
 
-        for(RegistroSemantico r : pilaSemantica){
-            r.printDatos();
-        }
         RS_DO do_uno = (RS_DO) pilaSemantica.pop();
         RS_Operador do_op = (RS_Operador) pilaSemantica.pop();
         // El RS siguiente se obtiene después para evitar problemas de tipo
         // en caso de que el operador se igual ya que a la izq del igual
         // viene un RS_IDENT y no un RS_DO
+
+        // validar do_uno, puede ser una variable o constante
+        if(do_uno.tipo.equals("variable")){
+            boolean seEncontro = false;
+            for(Simbolo s : tablaSimbolos){
+                if(s.nombre.equals(do_uno.valor)){
+                    // no hay error
+                    seEncontro = true;
+                }
+            }
+            if(!seEncontro){
+                // dar error
+                if(!do_uno.valor.equals("eax")){
+
+                    String msg = "La variable '";
+                    msg = msg.concat(do_uno.valor);
+                    msg = msg.concat("' no se encuentra definida");
+                    erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                    // agregar la variable a la tabla de simbolos
+                    SimboloVariable sv = new SimboloVariable();
+                    sv.nombre = do_uno.valor;
+                    sv.tipoSimbolo = "error";
+                    tablaSimbolos.add(sv);
+                }
+            }
+        }
 
         if(do_op.operador.equals("=")){
             // verificar que el tipo concuerde en ambos lados
@@ -1745,6 +1780,28 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                     e.printStackTrace();
                 }
 
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
+
             }
 
             // Generar un DO
@@ -1773,6 +1830,29 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                 } catch (IOException e ){
                     e.printStackTrace();
                 }
+
+
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
                 pilaSemantica.push(newDO);
@@ -1792,6 +1872,27 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
                 } catch (IOException e ){
                     e.printStackTrace();
+                }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
@@ -1821,6 +1922,49 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
                 } catch (IOException e ){
                     e.printStackTrace();
+                }
+
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
@@ -1854,6 +1998,27 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                 } catch (IOException e ){
                     e.printStackTrace();
                 }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
                 pilaSemantica.push(newDO);
@@ -1873,6 +2038,27 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
                 } catch (IOException e ){
                     e.printStackTrace();
+                }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
@@ -1902,6 +2088,48 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
 
                 } catch (IOException e ){
                     e.printStackTrace();
+                }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 // hago DO, variable, eax
                 RS_DO newDO = new RS_DO("variable", "eax");
@@ -2000,6 +2228,27 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                 } catch(IOException e){
                     e.printStackTrace();
                 }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
                 //Crear un registro DO
             }
             else if(do_uno.tipo.equals("variable") & do_dos.tipo.equals("constante_numerico")){
@@ -2052,6 +2301,27 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                     }
                 } catch(IOException e){
                     e.printStackTrace();
+                }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 //Crear un registro DO
             }
@@ -2112,6 +2382,48 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                     }
                 } catch(IOException e){
                     e.printStackTrace();
+                }
+                if(!do_uno.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_uno.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_uno.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_uno.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
+                }
+                if(!do_dos.valor.equals("eax")){
+
+                    boolean seEncontro = false;
+                    for(Simbolo s : tablaSimbolos){
+                        if(s.nombre.equals(do_dos.valor)){
+                            seEncontro = true;
+                        }
+                    }
+                    if(!seEncontro){
+
+                        String msg = "La variable '";
+                        msg = msg.concat(do_dos.valor);
+                        msg = msg.concat("' no se encuentra definida");
+                        erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+                        // agregar la variable a la tabla de simbolos
+                        SimboloVariable sv = new SimboloVariable();
+                        sv.nombre = do_dos.valor;
+                        sv.tipoSimbolo = "error";
+                        tablaSimbolos.add(sv);
+                    }
                 }
                 //Crear un registro DO
             }
@@ -2291,7 +2603,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
     public void funcStart(){
         sFuncion = new SimboloFuncion();
     }
-    public void recuerdaFuncId(String pId){
+    public void recuerdaFuncId(String pId, int lineaPos){
         try{
             sFuncion.nombre = pId;
             writeLine(";----------Inicio funcion------------", 0);
@@ -2308,7 +2620,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         RS_Tipo rsTipo = new RS_Tipo(pTipo);
         pilaSemantica.push(rsTipo);
     }
-    public void recuerdaIdentParam(String pIdent){
+    public void recuerdaIdentParam(String pIdent, int lineaPos){
         RS_Tipo rsTipo = (RS_Tipo) pilaSemantica.pop();
         ParametroFuncion pf = new ParametroFuncion(rsTipo.tipo, pIdent, String.valueOf(offsetParam));
         sFuncion.listaParametros.add(pf);
@@ -2356,7 +2668,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         sFuncion.retornoVariable = pf;
         returnEnDeclaracion = true;
     }
-    public void retornoFuncion(){
+    public void retornoFuncion(int lineaPos){
         retornEncontrado = true;
         RS_DO retorno = (RS_DO) pilaSemantica.pop();
         try{
@@ -2376,7 +2688,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         pilaSemantica.push(rsDo);
 
     }
-    public void funcEnd(){
+    public void funcEnd(int lineaPos){
         try{
             writeLine("mov esp, ebp", 0);
             writeLine("pop ebp", 0);
@@ -2390,6 +2702,8 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         // validar que si se indico return en la declaracion, tuve que haber venido en el cuerpo
         if(returnEnDeclaracion == true && retornEncontrado == false){
             //error semántico
+            ErrorSemantico err = new ErrorSemantico(lineaPos, "Error en el retorno de la funcion");
+            erroresSemanticos.add(err);
         }
 
     }
@@ -2572,7 +2886,7 @@ funcStart();
 		int funcIdleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int funcIdright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String funcId = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaFuncId(funcId);
+recuerdaFuncId(funcId, funcIdleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$2",97, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -2605,7 +2919,7 @@ recuerdaTipoParam(paramTipo);
 		int paramIdentleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int paramIdentright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String paramIdent = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaIdentParam(paramIdent);
+recuerdaIdentParam(paramIdent, paramIdentleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$4",99, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -2649,7 +2963,10 @@ recuerdaFuncMod(mod);
 		int modleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-6)).left;
 		int modright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-6)).right;
 		String mod = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-6)).value;
-		funcEnd();
+		int ffleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int ffright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String ff = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+		funcEnd(ffleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("FUNC",8, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-17)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -2685,7 +3002,7 @@ recuerdaTipoParam(paramTipo);
 		int paramIdentleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int paramIdentright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String paramIdent = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaIdentParam(paramIdent);
+recuerdaIdentParam(paramIdent, paramIdentleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$7",102, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -2818,7 +3135,10 @@ recuerdaIdentReturn(identReturn);
           case 34: // NT$10 ::= 
             {
               String RESULT =null;
-retornoFuncion();
+		int rfleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int rfright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String rf = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+retornoFuncion(rfleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$10",105, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -2829,6 +3149,9 @@ retornoFuncion();
               String RESULT =null;
               // propagate RESULT from NT$10
                 RESULT = (String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-1)).value;
+		int rfleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).left;
+		int rfright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).right;
+		String rf = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("RETURN_P",94, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-3)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
@@ -2886,7 +3209,7 @@ retornoFuncion();
 		int idleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaVariable(id);
+recuerdaVariable(id, idleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$11",106, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -2901,7 +3224,7 @@ recuerdaVariable(id);
 		int op_igleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int op_igright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String op_ig = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaOperador(op_ig);
+recuerdaOperador(op_ig, op_igleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$12",107, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3098,7 +3421,10 @@ recuerdaOperador(op_ig);
           case 63: // NT$14 ::= 
             {
               String RESULT =(String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
-evalBinary();
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+evalBinary(evleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$14",109, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3107,6 +3433,9 @@ evalBinary();
           case 64: // NT$15 ::= 
             {
               String RESULT =(String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-1)).value;
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
  testWhile(); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$15",110, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
@@ -3118,6 +3447,9 @@ evalBinary();
               String RESULT =null;
               // propagate RESULT from NT$15
                 RESULT = (String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-4)).value;
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-7)).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-7)).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-7)).value;
 		 endWhile(); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("STRU_WHILE",26, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-10)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
@@ -3163,7 +3495,10 @@ evalBinary();
           case 70: // NT$17 ::= 
             {
               String RESULT =(String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
-evalBinary();
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+evalBinary(evleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$17",112, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3172,6 +3507,9 @@ evalBinary();
           case 71: // NT$18 ::= 
             {
               String RESULT =(String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-1)).value;
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
  testIf(); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$18",113, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
@@ -3183,6 +3521,9 @@ evalBinary();
               String RESULT =null;
               // propagate RESULT from NT$18
                 RESULT = (String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-5)).value;
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-8)).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-8)).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-8)).value;
 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("STRU_IF",35, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-11)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
@@ -3287,7 +3628,7 @@ evalBinary();
 		int idleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaVariable(id);
+recuerdaVariable(id, idleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$20",115, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3456,7 +3797,10 @@ recuerdaVariable(id);
           case 101: // NT$24 ::= 
             {
               String RESULT =(String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
-evalBinary();
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+evalBinary(evleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$24",119, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3465,6 +3809,9 @@ evalBinary();
           case 102: // NT$25 ::= 
             {
               String RESULT =(String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-1)).value;
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
  testIf(); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$25",120, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
@@ -3476,6 +3823,9 @@ evalBinary();
               String RESULT =null;
               // propagate RESULT from NT$25
                 RESULT = (String) ((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-5)).value;
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-8)).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-8)).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-8)).value;
 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("STRU_IF_ELSE_IN",40, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-11)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
@@ -3517,7 +3867,7 @@ evalBinary();
 		int op_igleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int op_igright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String op_ig = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
- recuerdaOperador(op_ig); 
+ recuerdaOperador(op_ig, op_igleft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$27",122, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3531,7 +3881,10 @@ evalBinary();
 		int op_igleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-3)).left;
 		int op_igright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-3)).right;
 		String op_ig = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-3)).value;
-		evalBinary();
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+		evalBinary(evleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("BODY_ASSIGN",28, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-3)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3594,7 +3947,10 @@ evalBinary();
           case 115: // ASSIGN_NOT_VAR ::= EXP punto_coma 
             {
               String RESULT =null;
-		 evalBinary(); 
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+		 evalBinary(evleft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("ASSIGN_NOT_VAR",47, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-1)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3642,7 +3998,7 @@ evalBinary();
 		int inputTipoleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int inputTiporight = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String inputTipo = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
- recuerdoTipo(inputTipo); 
+ recuerdoTipo(inputTipo, inputTipoleft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$28",123, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3657,7 +4013,7 @@ evalBinary();
 		int inputAccessleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int inputAccessright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String inputAccess = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
- recuerdoAccess(inputAccess); 
+ recuerdoAccess(inputAccess, inputAccessleft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$29",124, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3675,7 +4031,7 @@ evalBinary();
 		int bleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int bright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String b = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
- recuerdoID(b); 
+ recuerdoID(b, bleft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$30",125, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3713,7 +4069,10 @@ evalBinary();
           case 125: // VAR_CONTRACT_P ::= punto_coma 
             {
               String RESULT =null;
-		 insertarTablaSimbolos(); 
+		int ileft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int iright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String i = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+		 insertarTablaSimbolos(ileft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("VAR_CONTRACT_P",25, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3722,7 +4081,10 @@ evalBinary();
           case 126: // VAR_CONTRACT_P ::= VAR_CONTRACT_C punto_coma 
             {
               String RESULT =null;
-		 insertarTablaSimbolosAsignacion(); 
+		int ileft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int iright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String i = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+		 insertarTablaSimbolosAsignacion(ileft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("VAR_CONTRACT_P",25, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-1)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3734,7 +4096,7 @@ evalBinary();
 		int op_igleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int op_igright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String op_ig = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaOperador(op_ig);
+recuerdaOperador(op_ig, op_igleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$31",126, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3748,7 +4110,10 @@ recuerdaOperador(op_ig);
 		int op_igleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).left;
 		int op_igright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).right;
 		String op_ig = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
-		evalBinary();
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+		evalBinary(evleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("VAR_CONTRACT_C",14, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3811,7 +4176,7 @@ recuerdaOperador(op_ig);
 		int idleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaVariable(id);
+recuerdaVariable(id, idleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$32",127, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3891,7 +4256,7 @@ recuerdaVariable(id);
 		int numleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int numright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String num = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaConstante(num, "constante_numerico");
+recuerdaConstante(num, "constante_numerico", numleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$33",128, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3917,7 +4282,7 @@ recuerdaConstante(num, "constante_numerico");
 		int numleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int numright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String num = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-		recuerdaConstante(num, "constante_numerico");
+		recuerdaConstante(num, "constante_numerico", numleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("ARIT_GATE",57, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -3956,7 +4321,7 @@ recuerdaConstante(num, "constante_numerico");
 		int opleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int opright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String op = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaOperador(op);
+recuerdaOperador(op, opleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$34",129, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4018,7 +4383,7 @@ recuerdaOperador(op);
 		int opleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int opright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String op = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaOperador(op);
+recuerdaOperador(op, opleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$35",130, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4098,7 +4463,7 @@ recuerdaOperador(op);
 		int numleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int numright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String num = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaConstante(num, "constante_numerico");
+recuerdaConstante(num, "constante_numerico", numleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$36",131, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4124,7 +4489,7 @@ recuerdaConstante(num, "constante_numerico");
 		int idleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaVariable(id);
+recuerdaVariable(id, idleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$37",132, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4138,7 +4503,10 @@ recuerdaVariable(id);
 		int idleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)).value;
-
+		int evleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
+		int evright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
+		String ev = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
+		evalBinary(evleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("OP_ARIT",16, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.elementAt(CUP$analisis_sintactico$top-2)), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4159,7 +4527,7 @@ recuerdaVariable(id);
 		int numleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int numright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String num = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-		recuerdaConstante(num, "constante_numerico"); evalBinary();
+		recuerdaConstante(num, "constante_numerico", numleft); evalBinary(numleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("OP_ARIT",16, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4186,7 +4554,7 @@ recuerdaVariable(id);
           case 170: // OP_ARIT_A ::= 
             {
               String RESULT =null;
-		evalBinary();
+
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("OP_ARIT_A",91, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4198,7 +4566,7 @@ recuerdaVariable(id);
 		int opleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int opright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String op = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaOperador(op);
+recuerdaOperador(op, opleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$38",133, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4443,7 +4811,7 @@ recuerdaOperador(op);
 		int boolleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int boolright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String bool = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaConstante(bool, "constante_booleana");
+recuerdaConstante(bool, "constante_booleana", boolleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$39",134, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4469,7 +4837,7 @@ recuerdaConstante(bool, "constante_booleana");
 		int boolleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int boolright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String bool = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
-recuerdaConstante(bool, "constante_booleana");
+recuerdaConstante(bool, "constante_booleana", boolleft);
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$40",135, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4495,7 +4863,7 @@ recuerdaConstante(bool, "constante_booleana");
 		int idleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
- recuerdaVariable(id); 
+ recuerdaVariable(id, idleft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$41",136, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4521,7 +4889,7 @@ recuerdaConstante(bool, "constante_booleana");
 		int numleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int numright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String num = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
- recuerdaConstante(num, "constante_numerico"); 
+ recuerdaConstante(num, "constante_numerico", numleft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$42",137, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
@@ -4547,7 +4915,7 @@ recuerdaConstante(bool, "constante_booleana");
 		int op_bleft = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).left;
 		int op_bright = ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()).right;
 		String op_b = (String)((java_cup.runtime.Symbol) CUP$analisis_sintactico$stack.peek()).value;
- recuerdaOperador(op_b); 
+ recuerdaOperador(op_b, op_bleft); 
               CUP$analisis_sintactico$result = parser.getSymbolFactory().newSymbol("NT$43",138, ((java_cup.runtime.Symbol)CUP$analisis_sintactico$stack.peek()), RESULT);
             }
           return CUP$analisis_sintactico$result;
