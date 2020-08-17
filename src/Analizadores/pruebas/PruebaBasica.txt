@@ -25,8 +25,7 @@ contract nombreContrato{
         while (a < 3){
             a = 3;
         }
-        
-        return a;
+        return 3;
     }
     // Una funcion, y en el cuerpo no declaraciones, if while y asignaciones
 

@@ -4,6 +4,11 @@ start:
 mov eax, dword [s]
 sub eax, 2
 mov dword [b], eax
+;----------Inicio funcion------------
+fi :
+push ebp
+mov ebp, esp
+sub esp, 0
 ;----------IF---------
 cmp 3, 3
 jl Else_label_0
@@ -39,8 +44,16 @@ mov eax, dword [a]
 sub eax, 3
 cmp eax, 0
 pop eax
-jl While_label_3
+jl While_exit_label_3
 mov dword [a], 3
+jump While_label_3
+While_exit_label_3 :
+;---------Fin While---------
+mov eax,  3
+mov esp, ebp
+pop ebp
+ret
+;----------Fin funcion------------
 SECTION .bss
 bbb resb 2
 s resb 2

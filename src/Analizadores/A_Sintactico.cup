@@ -13,6 +13,10 @@ parser code
     public static String nombreArchivo;
     public FileWriter myWriter;
     public int contador = 0;
+    public SimboloFuncion sFuncion;
+    public int offsetParam = 4;
+    public boolean retornEncontrado = false;
+    public boolean returnEnDeclaracion = false;
 
     // lista donde se almacenan los errores sintácticos
     public static LinkedList<TError> TablaES = new LinkedList<TError>();
@@ -689,11 +693,14 @@ parser code
         String whileExitLabel = rs.exit_label;
         String whileLabel = rs.while_label;
         try{
-            writeLine(whileExitLabel, 0);
+            writeLine("jump", 1);
+            writeLine(whileLabel, 0);
+            writeLine(whileExitLabel, 1);
+            writeLine(":", 0);
+            writeLine(";---------Fin While---------", 0);
         } catch(IOException e){
             e.printStackTrace();
         }
-        pilaSemantica.push(rs);
     }
 
     public void finArchivo(){
@@ -749,6 +756,111 @@ parser code
         }
     }
 
+    public void funcStart(){
+        sFuncion = new SimboloFuncion();
+    }
+    public void recuerdaFuncId(String pId){
+        try{
+            sFuncion.nombre = pId;
+            writeLine(";----------Inicio funcion------------", 0);
+            writeLine(pId, 1);
+            writeLine(":", 0);
+            writeLine("push ebp", 0);
+            writeLine("mov ebp, esp", 0);
+            writeLine("sub esp, 0", 0);
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+    public void recuerdaTipoParam(String pTipo){
+        RS_Tipo rsTipo = new RS_Tipo(pTipo);
+        pilaSemantica.push(rsTipo);
+    }
+    public void recuerdaIdentParam(String pIdent){
+        RS_Tipo rsTipo = (RS_Tipo) pilaSemantica.pop();
+        ParametroFuncion pf = new ParametroFuncion(rsTipo.tipo, pIdent, String.valueOf(offsetParam));
+        sFuncion.listaParametros.add(pf);
+        switch(rsTipo.tipo){
+            case "int": 
+                offsetParam += 4;
+                break;
+            case "string": 
+                offsetParam += 4;
+                break;
+            case "uint":
+                offsetParam += 4;
+                break;
+            case "bytes":
+                offsetParam += 1;
+                break;
+            case "bytes1":
+                offsetParam += 1;
+                break;
+            case "bytes2":
+                offsetParam += 2;
+                break;
+            case "bytes3":
+                offsetParam += 3;
+                break;
+
+            default:
+                break;
+        }
+    }
+    public void recuerdaFuncMod(String pMod){
+        if(pMod != null){
+            sFuncion.acceso = pMod;
+        } else {
+            sFuncion.acceso = "public";
+        }
+    }
+    public void recuerdaTipoReturn(String pTipo){
+        RS_Tipo rsTipo = new RS_Tipo(pTipo);
+        pilaSemantica.push(rsTipo);
+    }
+    public void recuerdaIdentReturn(String pIdent){
+        RS_Tipo rsTipo = (RS_Tipo) pilaSemantica.pop();
+        ParametroFuncion pf = new ParametroFuncion(rsTipo.tipo, pIdent, null);
+        sFuncion.retornoVariable = pf;
+        returnEnDeclaracion = true;
+    }
+    public void retornoFuncion(){
+        retornEncontrado = true;
+        RS_DO retorno = (RS_DO) pilaSemantica.pop();
+        try{
+            if(retorno.tipo.equals("constante_numerico")){
+                writeLine("mov eax, ", 1);
+                writeLine(retorno.valor, 0);
+            } else if(retorno.tipo.equals("variable")){
+                writeLine("mov eax, dword [", 1);
+                writeLine(retorno.valor, 1);
+                writeLine("]", 0);
+
+            }
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+        RS_DO rsDo = new RS_DO("variable", "eax");
+        pilaSemantica.push(rsDo);
+
+    }
+    public void funcEnd(){
+        try{
+            writeLine("mov esp, ebp", 0);
+            writeLine("pop ebp", 0);
+            writeLine("ret", 0);
+            writeLine(";----------Fin funcion------------", 0);
+            offsetParam = 4;
+            sFuncion = null;
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+        // validar que si se indico return en la declaracion, tuve que haber venido en el cuerpo
+        if(returnEnDeclaracion == true && retornEncontrado == false){
+            //error semántico
+        }
+
+    }
 
 :}
 
@@ -762,7 +874,7 @@ action code
 terminal String pragma, solidity, techo, contract, O_Parent_L, C_Parent_L,enumSoli, punto_coma, coma, bool, byteSoli, bytes, uint, uint_O, uint_DS, uint_TD, uint_SC, uint_CVO, uint_DCS, intSoli, int_O, int_DS, int_TD, int_SC, int_CVO, int_DCS, address, address_payable, O_Parent_C, C_Parent_C, publicSoli, privateSoli, igual, trueSoli, falseSoli, igual_igual , mayor_igual , mayor , menor_igual , menor , diferente , op_or , op_and , negacion, mas , menos , div , por , O_Parent_R , C_Parent_R , porcentaje , mas_igual , menos_igual , por_igual , div_igual, punto, thisSoli, whileSoli, returnSoli, breakSoli, continueSoli, forSoli, doSoli, ifSoli, elseSoli, interrogacion_C, punto_punto, structSoli, functionSoli, payableSoli, internalSoli, returns, charss, string, ufixedSoli, ident, numero,numero_HEX,stringSoli, B_I , B_II , B_III , B_IV , B_V , B_VI , B_VII , B_IIX , B_IX , B_X , B_XI , B_XII , B_XIII , B_XIV , B_XV , B_XVI , B_XVII , B_XIIX , B_XIX , B_XX , B_XXI , B_XXII , B_XXIII , B_XXIV , B_XXV , B_XXVI , B_XXVII , B_XXIIX , B_XXIX , B_XXX , B_XXXI , B_XXXII;
 
 //------> declaracion de no terminales
-non terminal String INICIO_INICIO, INICIO, BODY_CONTRACT, BODY_CONTRACT_P, BODY_CONTRACT_PP, BODY_CONTRACT_PPP, EN, STRU, FUNC, EN_IDENT, TIPO, VAR_ARR, VAR_ACCESS, VAR_CONTRACT, VAR_CONTRACT_C, EXP, OP_ARIT, OP,OP_BOOL,OP_OP_BOOL, OP_ARIT_P, OP_BOOL_P,FUNC_CALL_PARAMS,FUNC_CALL_PARAMS_P,BODY_LIT_TF, VAR_CONTRACT_P, STRU_WHILE, BODY_SENT, BODY_ASSIGN, BODY_SENT_P, BODY_FUN_CALL, BODY_SENT_M, STRU_FOR, FOR_VAR, STRU_DO_WHILE, STRU_IF, STRU_ELSE, STRU_IF_LINE, STRUCTURE, STRUCTURE_VAR, STRU_IF_ELSE_IN, STRU_ELSE_IN, CUERPO, FUNC_PARAM, FUNC_MOD, FUNC_RETURNS, CUERPO_M, ASSIGN_NOT_VAR, BODY_SENT_PP, CUERPO_P, EXP_P, EXP_PP, EXP_PPP, OP_EXCL, BOOL_GATE, FUNC_CALL_CASE, FUNC_CALL_CASE_P, ARIT_GATE, EXP_P_S, INICIO_S, CUERPO_MA, CUERPO_ASSIGN_F, CUERPO_ASSIGN_FP, F_EXP,F_EXP_P, F_EXP_PP, F_BODY_LIT_TF, F_ARIT_GATE, F_OP_ARIT_P, F_EXP_P_S, F_FUNC_CALL_CASE, F_OP_ARIT, F_EXP_PPP, F_FUNC_CALL_CASE_P, F_OP_ARIT_Parent, F_OP , NEGADO, OP_BOOL_N, FS_EXP,FS_EXP_P, FS_EXP_PP, FS_BODY_LIT_TF, FS_ARIT_GATE, FS_EXP_P_S, FS_EXP_PPP, FS_OP, FS_BOOL_GATE, FS_OP_BOOL_P, FS_OP_OP_BOOL, FS_OP_BOOL , PARENT_S, OP_ARIT_A, FS_OP_BOOL_F, PCLASS;
+non terminal String INICIO_INICIO, INICIO, BODY_CONTRACT, BODY_CONTRACT_P, BODY_CONTRACT_PP, BODY_CONTRACT_PPP, EN, STRU, FUNC, EN_IDENT, TIPO, VAR_ARR, VAR_ACCESS, VAR_CONTRACT, VAR_CONTRACT_C, EXP, OP_ARIT, OP,OP_BOOL,OP_OP_BOOL, OP_ARIT_P, OP_BOOL_P,FUNC_CALL_PARAMS,FUNC_CALL_PARAMS_P,BODY_LIT_TF, VAR_CONTRACT_P, STRU_WHILE, BODY_SENT, BODY_ASSIGN, BODY_SENT_P, BODY_FUN_CALL, BODY_SENT_M, STRU_FOR, FOR_VAR, STRU_DO_WHILE, STRU_IF, STRU_ELSE, STRU_IF_LINE, STRUCTURE, STRUCTURE_VAR, STRU_IF_ELSE_IN, STRU_ELSE_IN, CUERPO, FUNC_PARAM, FUNC_MOD, FUNC_RETURNS, CUERPO_M, ASSIGN_NOT_VAR, BODY_SENT_PP, CUERPO_P, EXP_P, EXP_PP, EXP_PPP, OP_EXCL, BOOL_GATE, FUNC_CALL_CASE, FUNC_CALL_CASE_P, ARIT_GATE, EXP_P_S, INICIO_S, CUERPO_MA, CUERPO_ASSIGN_F, CUERPO_ASSIGN_FP, F_EXP,F_EXP_P, F_EXP_PP, F_BODY_LIT_TF, F_ARIT_GATE, F_OP_ARIT_P, F_EXP_P_S, F_FUNC_CALL_CASE, F_OP_ARIT, F_EXP_PPP, F_FUNC_CALL_CASE_P, F_OP_ARIT_Parent, F_OP , NEGADO, OP_BOOL_N, FS_EXP,FS_EXP_P, FS_EXP_PP, FS_BODY_LIT_TF, FS_ARIT_GATE, FS_EXP_P_S, FS_EXP_PPP, FS_OP, FS_BOOL_GATE, FS_OP_BOOL_P, FS_OP_OP_BOOL, FS_OP_BOOL , PARENT_S, OP_ARIT_A, FS_OP_BOOL_F, PCLASS, RETURN_P;
 
 precedence left porcentaje, mas_igual, por_igual, div_igual, menos_igual;
 precedence nonassoc C_Parent_R;
@@ -786,10 +898,11 @@ BODY_CONTRACT_PP ::= STRUCTURE BODY_CONTRACT_PP | BODY_CONTRACT_PPP;
 BODY_CONTRACT_PPP ::= FUNC BODY_CONTRACT_PPP | ;
 
 /*------------------------- FUNCIONES -------------------------------*/
-FUNC ::= functionSoli ident O_Parent_R TIPO ident FUNC_PARAM C_Parent_R FUNC_MOD FUNC_RETURNS O_Parent_L CUERPO_M returnSoli EXP punto_coma C_Parent_L | functionSoli error C_Parent_L; // Aqui se agrego ---------
-FUNC_PARAM ::= coma TIPO ident FUNC_PARAM | ;
+FUNC ::= functionSoli {:funcStart();:} ident:funcId {:recuerdaFuncId(funcId);:} O_Parent_R TIPO:paramTipo {:recuerdaTipoParam(paramTipo);:} ident:paramIdent {:recuerdaIdentParam(paramIdent);:} FUNC_PARAM C_Parent_R FUNC_MOD:mod {:recuerdaFuncMod(mod);:} FUNC_RETURNS O_Parent_L CUERPO_M RETURN_P C_Parent_L {:funcEnd();:} | functionSoli error C_Parent_L; // Aqui se agrego ---------
+FUNC_PARAM ::= coma TIPO:paramTipo {:recuerdaTipoParam(paramTipo);:} ident:paramIdent {:recuerdaIdentParam(paramIdent);:} FUNC_PARAM | ;
 FUNC_MOD ::= payableSoli | privateSoli | publicSoli | internalSoli | ;
-FUNC_RETURNS ::= returns O_Parent_R TIPO ident C_Parent_R | ;
+FUNC_RETURNS ::= returns O_Parent_R TIPO:tipoReturn {:recuerdaTipoReturn(tipoReturn);:} ident:identReturn {:recuerdaIdentReturn(identReturn);:} C_Parent_R | ;
+RETURN_P ::= returnSoli EXP {:retornoFuncion();:} punto_coma | ;
 
 /*--------------------------- CUERPO --------------------------------*/
 /* Revisar declaraciones con tipo en cuerpo de funcion*/
