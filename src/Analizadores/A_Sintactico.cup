@@ -24,6 +24,7 @@ parser code
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
     public static LinkedList<Simbolo> tablaSimbolos = new LinkedList<Simbolo>();
+    public static boolean errorEncontrado = false;
 
     public void writeLine(final String pData, final int flag) throws IOException {
         if (flag == 0) {
@@ -183,6 +184,7 @@ parser code
         pilaSemantica.push(op);
     }
 
+    // Ya se agregaron los errores pero revisar la linea que muestra cuando es una expresion booleana
     public void evalBinary(int lineaPos){
 
         RS_DO do_uno = (RS_DO) pilaSemantica.pop();
@@ -1017,6 +1019,14 @@ parser code
 
     public void finArchivo(){
         try{
+            // poner el codigo de finalizacion
+
+            writeLine("mov eax, 1", 0);
+            writeLine("xor ebx, ebx", 0);
+            writeLine("int 80h", 0);
+            writeLine("", 0);
+
+            // escribir el segmento de datos no inicializados
             writeLine("SECTION .bss", 0);
             for(Simbolo s : tablaSimbolos){
                 
@@ -1091,7 +1101,24 @@ parser code
     public void recuerdaIdentParam(String pIdent, int lineaPos){
         RS_Tipo rsTipo = (RS_Tipo) pilaSemantica.pop();
         ParametroFuncion pf = new ParametroFuncion(rsTipo.tipo, pIdent, String.valueOf(offsetParam));
+
+        // revisar si el parametro ya fue definido
+        boolean seEncontro = false;
+        for (ParametroFuncion p : sFuncion.listaParametros){
+            if(p.nombre.equals(pIdent)){
+                seEncontro = true;
+            }
+        }
+        if(seEncontro){
+            // error ya se definio
+            String msg = "El parámetro '";
+            msg = msg.concat(pIdent);
+            msg = msg.concat("' ya se encuentra definido");
+            erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+        }
+
         sFuncion.listaParametros.add(pf);
+
         switch(rsTipo.tipo){
             case "int": 
                 offsetParam += 4;
@@ -1130,11 +1157,24 @@ parser code
         RS_Tipo rsTipo = new RS_Tipo(pTipo);
         pilaSemantica.push(rsTipo);
     }
-    public void recuerdaIdentReturn(String pIdent){
+    public void recuerdaIdentReturn(String pIdent, int lineaPos){
         RS_Tipo rsTipo = (RS_Tipo) pilaSemantica.pop();
         ParametroFuncion pf = new ParametroFuncion(rsTipo.tipo, pIdent, null);
         sFuncion.retornoVariable = pf;
         returnEnDeclaracion = true;
+
+        boolean seEncontro = false;
+        for(Simbolo s : tablaSimbolos){
+            if(s.nombre.equals(pIdent)){
+                seEncontro = true;
+            }
+        }
+        if(seEncontro){
+            String msg = "La variable de retorno '";
+            msg = msg.concat(pIdent);
+            msg = msg.concat("' ya se encuentra definida");
+            erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+        }
     }
     public void retornoFuncion(int lineaPos){
         retornEncontrado = true;
@@ -1172,6 +1212,66 @@ parser code
             //error semántico
             ErrorSemantico err = new ErrorSemantico(lineaPos, "Error en el retorno de la funcion");
             erroresSemanticos.add(err);
+        } else if(returnEnDeclaracion == false && retornEncontrado == true){
+            ErrorSemantico err = new ErrorSemantico(lineaPos, "Error en el retorno de la funcion");
+            erroresSemanticos.add(err);
+        }
+
+    }
+
+    public void recordarBreak(String p, int lineaPos){
+        // buscar la etiqueta while más proxima
+        RS_WHILE rs_w = null;
+        for(RegistroSemantico rs: pilaSemantica){
+            if(rs.valueType == RegistroSemantico.Value.WHILE){
+                rs_w = (RS_WHILE) rs;
+                break;
+            }
+        }
+        if(rs_w != null){
+            // obtener la etiqueta de exit
+            String exitL = rs_w.exit_label;
+            try{
+                writeLine("jump", 1);
+                writeLine(exitL, 0);
+            } catch (IOException e){
+                e.printStackTrace();
+            }
+            // saltar a esa etiqueta
+        } else {
+            // si no la encuentro dar error semantico
+            String msg = "El break no se encuentra dentro de un while";
+            erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+        }
+    }
+
+    public void recordarContinue(String p, int lineaPos){
+        // buscar la etiqueta while más proxima
+            // si no la encuentro dar error semantico
+        // obtener la etiqueta de inicio del while
+        // saltar a esa etiqueta
+        // buscar la etiqueta while más proxima
+        RS_WHILE rs_w = null;
+        for(RegistroSemantico rs: pilaSemantica){
+            if(rs.valueType == RegistroSemantico.Value.WHILE){
+                rs_w = (RS_WHILE) rs;
+                break;
+            }
+        }
+        if(rs_w != null){
+            // obtener la etiqueta de exit
+            String exitL = rs_w.while_label;
+            try{
+                writeLine("jump", 1);
+                writeLine(exitL, 0);
+            } catch (IOException e){
+                e.printStackTrace();
+            }
+            // saltar a esa etiqueta
+        } else {
+            // si no la encuentro dar error semantico
+            String msg = "El continue no se encuentra dentro de un while";
+            erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
         }
 
     }
@@ -1215,7 +1315,7 @@ BODY_CONTRACT_PPP ::= FUNC BODY_CONTRACT_PPP | ;
 FUNC ::= functionSoli {:funcStart();:} ident:funcId {:recuerdaFuncId(funcId, funcIdleft);:} O_Parent_R TIPO:paramTipo {:recuerdaTipoParam(paramTipo);:} ident:paramIdent {:recuerdaIdentParam(paramIdent, paramIdentleft);:} FUNC_PARAM C_Parent_R FUNC_MOD:mod {:recuerdaFuncMod(mod);:} FUNC_RETURNS O_Parent_L CUERPO_M RETURN_P C_Parent_L:ff {:funcEnd(ffleft);:} | functionSoli error C_Parent_L; // Aqui se agrego ---------
 FUNC_PARAM ::= coma TIPO:paramTipo {:recuerdaTipoParam(paramTipo);:} ident:paramIdent {:recuerdaIdentParam(paramIdent, paramIdentleft);:} FUNC_PARAM | ;
 FUNC_MOD ::= payableSoli | privateSoli | publicSoli | internalSoli | ;
-FUNC_RETURNS ::= returns O_Parent_R TIPO:tipoReturn {:recuerdaTipoReturn(tipoReturn);:} ident:identReturn {:recuerdaIdentReturn(identReturn);:} C_Parent_R | ;
+FUNC_RETURNS ::= returns O_Parent_R TIPO:tipoReturn {:recuerdaTipoReturn(tipoReturn);:} ident:identReturn {:recuerdaIdentReturn(identReturn, identReturnleft);:} C_Parent_R | ;
 RETURN_P ::= returnSoli EXP:rf {:retornoFuncion(rfleft);:} punto_coma | ;
 
 /*--------------------------- CUERPO --------------------------------*/
@@ -1248,7 +1348,7 @@ STRU_FOR ::= forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Pa
 STRU_DO_WHILE ::= doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma ; // aqui se agrego ----------
 
 /*---------------------------- if -----------------------------------*/
-STRU_IF ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL:ev {:evalBinary(evleft);:} C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
+STRU_IF ::= ifSoli {: startIf(); :} O_Parent_R OP_BOOL:ev {:evalBinary(evright);:} C_Parent_R {: testIf(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L STRU_ELSE | ifSoli error C_Parent_L; // Aqui se agrego ----------
 
 /*--------------------------- else ----------------------------------*/
 STRU_ELSE ::= elseSoli {: startElse(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endIf(); :} | elseSoli error C_Parent_L | {: endIf(); :} ; // Aqui se agrego ---------
@@ -1262,13 +1362,13 @@ STRU_IF_LINE ::= O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto E
 /*------------------------- BODY_SENT -------------------------------*////AGREGAR AQUI
 BODY_SENT_M ::= BODY_SENT BODY_SENT_M | ;
 BODY_SENT ::= ident:id {:recuerdaVariable(id, idleft);:} BODY_SENT_P | thisSoli punto ident igual EXP punto_coma
-    | whileSoli {: startWhile(); :} O_Parent_R OP_BOOL C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :}
+    | whileSoli {: startWhile(); :} O_Parent_R OP_BOOL:ev {:evalBinary(evleft);:} C_Parent_R {: testWhile(); :} O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L {: endWhile(); :}
     | forSoli O_Parent_R FOR_VAR punto_coma OP_BOOL punto_coma F_EXP C_Parent_R O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L 
     | doSoli O_Parent_L BODY_SENT BODY_SENT_M C_Parent_L whileSoli O_Parent_R OP_BOOL C_Parent_R punto_coma 
     | STRU_IF_ELSE_IN
     | returnSoli punto_coma 
-    | breakSoli punto_coma 
-    | continueSoli punto_coma ;
+    | breakSoli:br {:recordarBreak(br, brleft);:} punto_coma 
+    | continueSoli:b {:recordarContinue(b, bleft);:} punto_coma ;
 
 BODY_SENT_P ::= punto ident BODY_SENT_PP| BODY_SENT_PP;
 BODY_SENT_PP ::= BODY_ASSIGN | BODY_FUN_CALL | igual O_Parent_R OP_BOOL C_Parent_R interrogacion_C EXP punto_punto EXP punto_coma;
@@ -1353,9 +1453,9 @@ OP_EXCL ::= mas:op_op {:RESULT = op_op;:} | menos:op_op {:RESULT = op_op;:} | di
 // THREE ::= ident | thisSoli punto ident | numero | ;
 
 /*-------------------- Operaciones booleanas ------------------------*///NO TIENE PUNTO Y COMA
-OP_BOOL ::= NEGADO OP_BOOL_N;
-OP_BOOL_N ::= trueSoli:bool {:recuerdaConstante(bool, "constante_booleana", boolleft);:} OP_BOOL_P | falseSoli:bool{:recuerdaConstante(bool, "constante_booleana", boolleft);:} OP_BOOL_P | ident:id {: recuerdaVariable(id, idleft); :} OP_BOOL_P | numero:num {: recuerdaConstante(num, "constante_numerico", numleft); :} OP_BOOL_P;
-OP_BOOL_P ::= OP_OP_BOOL:op_b {: recuerdaOperador(op_b, op_bleft); :} OP_BOOL | ;
+OP_BOOL ::= NEGADO OP_BOOL_N:opop {:RESULT = opop;:};
+OP_BOOL_N ::= trueSoli:bool {:recuerdaConstante(bool, "constante_booleana", boolleft);:} OP_BOOL_P:opop {:RESULT = opop;:} | falseSoli:bool{:recuerdaConstante(bool, "constante_booleana", boolleft);:} OP_BOOL_P | ident:id {: recuerdaVariable(id, idleft); :} OP_BOOL_P | numero:num {: recuerdaConstante(num, "constante_numerico", numleft); :} OP_BOOL_P;
+OP_BOOL_P ::= OP_OP_BOOL:op_b {: recuerdaOperador(op_b, op_bleft); RESULT = op_b; :} OP_BOOL | ;
 
 OP_OP_BOOL ::= igual_igual:op_bool {: RESULT=op_bool; :} | mayor_igual:op_bool {: RESULT=op_bool; :} | mayor:op_bool {: RESULT=op_bool; :} | menor_igual:op_bool {: RESULT=op_bool; :} | menor:op_bool {: RESULT=op_bool; :} | diferente:op_bool {: RESULT=op_bool; :} | op_or | op_and;
 

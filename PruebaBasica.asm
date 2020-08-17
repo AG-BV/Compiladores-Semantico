@@ -1,9 +1,7 @@
 SECTION .text
 global start
 start:
-mov eax, dword [s]
-sub eax, 2
-mov dword [b], eax
+mov dword [c], 2
 ;----------Inicio funcion------------
 fi :
 push ebp
@@ -11,8 +9,8 @@ mov ebp, esp
 sub esp, 0
 ;----------IF---------
 push eax
-mov eax, dword [e]
-sub eax, 3
+mov eax, dword [a]
+sub eax, 0
 cmp eax, 0
 pop eax
 jl Else_label_0
@@ -27,7 +25,7 @@ jg Else_label_1
 mov dword [b], 3
 Exit_label_1 :
 ;-------Fin if-------
-mov eax, dword [h]
+mov eax, dword [a]
 sub eax, 3
 mov dword [z], eax
 jump Exit_label_0
@@ -52,15 +50,31 @@ sub eax, 3
 cmp eax, 0
 pop eax
 jl While_exit_label_3
-mov dword [a], 3
+mov dword [a], 2
+;----------While---------
+While_label_4 :
+push eax
+mov eax, dword [a]
+sub eax, 3
+cmp eax, 0
+pop eax
+jl While_exit_label_4
+mov dword [a], 2
+mov dword [a], 2
+jump While_label_4
+While_exit_label_4 :
+;---------Fin While---------
 jump While_label_3
 While_exit_label_3 :
 ;---------Fin While---------
-mov eax,  3
 mov esp, ebp
 pop ebp
 ret
 ;----------Fin funcion------------
+mov eax, 1
+xor ebx, ebx
+int 80h
+
 SECTION .bss
 z resb 4
 bbb resb 2

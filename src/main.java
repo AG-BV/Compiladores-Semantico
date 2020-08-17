@@ -74,12 +74,10 @@ public class main {
             sintactico.myWriter = new FileWriter(nombreSalida);
             System.out.println("--------------------------- Parseando... ---------------------------");
             sintactico.parse();
-            // System.out.println("------------------------ Datos de ejecucion
-            // ---------------------------");
-            // accessToken(lexico);
-            // System.out.println("--------------------------- Errores sintacticos
-            // ---------------------------");
-            // accessErrors(sintactico);
+            System.out.println("------------------------ Datos de ejecucion ---------------------------");
+            accessToken(lexico);
+            System.out.println("--------------------------- Errores sintacticos ---------------------------");
+            accessErrors(sintactico);
             LinkedList<RegistroSemantico> pilaSemantica = sintactico.pilaSemantica;
             LinkedList<Simbolo> tablaSimbolos = sintactico.tablaSimbolos;
             System.out.println("--------------------------- Tabla de simbolos ---------------------------");

@@ -3,22 +3,21 @@ pragma solidity ^0.4.0;
 contract nombreContrato{
 
     // Declaraciones y pueden tener asignaciones
-    int c;
-    int a;
+    int c = 2;
     int a;
     uint b;
     string s;
     bytes2 bbb;
-    uint b = s - 2;
+    //uint b = s - 2;
     int z;
 
-	function fi(int x, int y) returns (int a ) { 
-        if (e < 3) {
+	function fi(int x, int y) returns (int a) { 
+        if (a < 0) {
             a = 2;
             if (a > 3) {
                 b = 3;
             }
-            z = h -3;
+            z = a -3;
         } else {
             if (a > 3) {
                 b = 3;
@@ -26,9 +25,12 @@ contract nombreContrato{
         }
 
         while (a < 3){
-            a = 3;
+            a = 2;
+            while(a < 3){
+                a = 2;
+                a = 2;
+            }
         }
-        return 3;
     }
     // Una funcion, y en el cuerpo no declaraciones, if while y asignaciones
 
