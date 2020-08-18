@@ -67,6 +67,7 @@ While_exit_label_4 :
 jump While_label_3
 While_exit_label_3 :
 ;---------Fin While---------
+mov eax,  3
 mov esp, ebp
 pop ebp
 ret

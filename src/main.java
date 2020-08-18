@@ -88,7 +88,14 @@ public class main {
             for (ErrorSemantico err : sintactico.erroresSemanticos) {
                 err.printDatos();
             }
-            // System.out.println(sintactico.resultado);
+
+            // Eliminar archivo de salida si hay error
+            sintactico.myWriter.close();
+            if (sintactico.errorEncontrado) {
+                System.out.println("Eliminando archivo de salida...");
+                File archivoS = new File(nombreSalida);
+                archivoS.delete();
+            }
         } catch (Exception e) {
             System.out.println(e);
         }

@@ -48,6 +48,7 @@ parser code
             System.out.println("------ Recuperacion exitosa ------");
             System.out.println("\t\tLexema: "+lexema);
         }
+        errorEncontrado = true;
     }
 
     //Metodo al que se llama en el momento en que ya no es posible una recuperacion de errores
@@ -62,6 +63,7 @@ parser code
             System.out.println("------ Error Sintactico irrecuperable ------");
             System.out.println("\t\tLexema: "+lexema);
         }
+        errorEncontrado = true;
     }
 
     /* Metodos para realizar las acciones semánticas*/
@@ -113,6 +115,7 @@ parser code
                 msg = msg.concat("' ya se encuentra definida");
                 erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
                 estaEnTabla = true;
+                errorEncontrado = true;
             }
         }
 
@@ -158,6 +161,7 @@ parser code
                 msg = msg.concat("' ya se encuentra definida");
                 erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
                 estaEnTabla = true;
+                errorEncontrado = true;
             }
         }
 
@@ -269,6 +273,7 @@ parser code
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
 
@@ -321,6 +326,7 @@ parser code
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -362,6 +368,7 @@ parser code
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -413,6 +420,7 @@ parser code
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 if(!do_uno.valor.equals("eax")){
@@ -434,6 +442,7 @@ parser code
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -487,6 +496,7 @@ parser code
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -528,6 +538,7 @@ parser code
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -578,6 +589,7 @@ parser code
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 if(!do_uno.valor.equals("eax")){
@@ -599,6 +611,7 @@ parser code
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -717,6 +730,7 @@ parser code
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 //Crear un registro DO
@@ -791,6 +805,7 @@ parser code
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 //Crear un registro DO
@@ -872,6 +887,7 @@ parser code
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 if(!do_dos.valor.equals("eax")){
@@ -893,6 +909,7 @@ parser code
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 //Crear un registro DO
@@ -1115,6 +1132,7 @@ parser code
             msg = msg.concat(pIdent);
             msg = msg.concat("' ya se encuentra definido");
             erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+            errorEncontrado = true;
         }
 
         sFuncion.listaParametros.add(pf);
@@ -1174,6 +1192,7 @@ parser code
             msg = msg.concat(pIdent);
             msg = msg.concat("' ya se encuentra definida");
             erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+            errorEncontrado = true;
         }
     }
     public void retornoFuncion(int lineaPos){
@@ -1212,9 +1231,11 @@ parser code
             //error semántico
             ErrorSemantico err = new ErrorSemantico(lineaPos, "Error en el retorno de la funcion");
             erroresSemanticos.add(err);
+            errorEncontrado = true;
         } else if(returnEnDeclaracion == false && retornEncontrado == true){
             ErrorSemantico err = new ErrorSemantico(lineaPos, "Error en el retorno de la funcion");
             erroresSemanticos.add(err);
+            errorEncontrado = true;
         }
 
     }
@@ -1242,6 +1263,7 @@ parser code
             // si no la encuentro dar error semantico
             String msg = "El break no se encuentra dentro de un while";
             erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+            errorEncontrado = true;
         }
     }
 
@@ -1272,6 +1294,7 @@ parser code
             // si no la encuentro dar error semantico
             String msg = "El continue no se encuentra dentro de un while";
             erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+            errorEncontrado = true;
         }
 
     }

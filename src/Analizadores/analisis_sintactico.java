@@ -1559,6 +1559,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
     public static LinkedList<Integer> listaParametros = new LinkedList<Integer>();
     public static LinkedList<RegistroSemantico> pilaSemantica = new LinkedList<RegistroSemantico>();
     public static LinkedList<Simbolo> tablaSimbolos = new LinkedList<Simbolo>();
+    public static boolean errorEncontrado = false;
 
     public void writeLine(final String pData, final int flag) throws IOException {
         if (flag == 0) {
@@ -1582,6 +1583,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             System.out.println("------ Recuperacion exitosa ------");
             System.out.println("\t\tLexema: "+lexema);
         }
+        errorEncontrado = true;
     }
 
     //Metodo al que se llama en el momento en que ya no es posible una recuperacion de errores
@@ -1596,6 +1598,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             System.out.println("------ Error Sintactico irrecuperable ------");
             System.out.println("\t\tLexema: "+lexema);
         }
+        errorEncontrado = true;
     }
 
     /* Metodos para realizar las acciones semánticas*/
@@ -1647,6 +1650,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                 msg = msg.concat("' ya se encuentra definida");
                 erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
                 estaEnTabla = true;
+                errorEncontrado = true;
             }
         }
 
@@ -1692,6 +1696,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                 msg = msg.concat("' ya se encuentra definida");
                 erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
                 estaEnTabla = true;
+                errorEncontrado = true;
             }
         }
 
@@ -1803,6 +1808,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
 
@@ -1855,6 +1861,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -1896,6 +1903,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -1947,6 +1955,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 if(!do_uno.valor.equals("eax")){
@@ -1968,6 +1977,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -2021,6 +2031,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -2062,6 +2073,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -2112,6 +2124,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 if(!do_uno.valor.equals("eax")){
@@ -2133,6 +2146,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 // hago DO, variable, eax
@@ -2251,6 +2265,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 //Crear un registro DO
@@ -2325,6 +2340,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 //Crear un registro DO
@@ -2406,6 +2422,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_uno.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 if(!do_dos.valor.equals("eax")){
@@ -2427,6 +2444,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
                         sv.nombre = do_dos.valor;
                         sv.tipoSimbolo = "error";
                         tablaSimbolos.add(sv);
+                        errorEncontrado = true;
                     }
                 }
                 //Crear un registro DO
@@ -2649,6 +2667,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             msg = msg.concat(pIdent);
             msg = msg.concat("' ya se encuentra definido");
             erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+            errorEncontrado = true;
         }
 
         sFuncion.listaParametros.add(pf);
@@ -2708,6 +2727,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             msg = msg.concat(pIdent);
             msg = msg.concat("' ya se encuentra definida");
             erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+            errorEncontrado = true;
         }
     }
     public void retornoFuncion(int lineaPos){
@@ -2746,9 +2766,11 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             //error semántico
             ErrorSemantico err = new ErrorSemantico(lineaPos, "Error en el retorno de la funcion");
             erroresSemanticos.add(err);
+            errorEncontrado = true;
         } else if(returnEnDeclaracion == false && retornEncontrado == true){
             ErrorSemantico err = new ErrorSemantico(lineaPos, "Error en el retorno de la funcion");
             erroresSemanticos.add(err);
+            errorEncontrado = true;
         }
 
     }
@@ -2776,6 +2798,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             // si no la encuentro dar error semantico
             String msg = "El break no se encuentra dentro de un while";
             erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+            errorEncontrado = true;
         }
     }
 
@@ -2806,6 +2829,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             // si no la encuentro dar error semantico
             String msg = "El continue no se encuentra dentro de un while";
             erroresSemanticos.add(new ErrorSemantico(lineaPos + 1, msg));
+            errorEncontrado = true;
         }
 
     }

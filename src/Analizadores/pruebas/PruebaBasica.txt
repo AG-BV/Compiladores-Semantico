@@ -11,7 +11,7 @@ contract nombreContrato{
     //uint b = s - 2;
     int z;
 
-	function fi(int x, int y) returns (int a) { 
+	function fi(int x, int y) returns (int e) { 
         if (a < 0) {
             a = 2;
             if (a > 3) {
@@ -31,6 +31,7 @@ contract nombreContrato{
                 a = 2;
             }
         }
+        return 3;
     }
     // Una funcion, y en el cuerpo no declaraciones, if while y asignaciones
 
