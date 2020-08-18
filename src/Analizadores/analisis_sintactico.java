@@ -2494,7 +2494,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         String elseLabel = rs.else_label;
         try{
             // jump exitLabel
-            writeLine("jump", 1);
+            writeLine("jmp", 1);
             writeLine(exitLabel, 0);
             // elseLabel:
             writeLine(elseLabel, 1);
@@ -2559,7 +2559,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
         String whileExitLabel = rs.exit_label;
         String whileLabel = rs.while_label;
         try{
-            writeLine("jump", 1);
+            writeLine("jmp", 1);
             writeLine(whileLabel, 0);
             writeLine(whileExitLabel, 1);
             writeLine(":", 0);
@@ -2623,8 +2623,8 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
     public void inicioArchivo(){
         try{
             writeLine("SECTION .text", 0);
-            writeLine("global start", 0);
-            writeLine("start:", 0);
+            writeLine("global main", 0);
+            writeLine("main:", 0);
         } catch(IOException e){
             e.printStackTrace();
         }
@@ -2788,7 +2788,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             // obtener la etiqueta de exit
             String exitL = rs_w.exit_label;
             try{
-                writeLine("jump", 1);
+                writeLine("jmp", 1);
                 writeLine(exitL, 0);
             } catch (IOException e){
                 e.printStackTrace();
@@ -2819,7 +2819,7 @@ public class analisis_sintactico extends java_cup.runtime.lr_parser {
             // obtener la etiqueta de exit
             String exitL = rs_w.while_label;
             try{
-                writeLine("jump", 1);
+                writeLine("jmp", 1);
                 writeLine(exitL, 0);
             } catch (IOException e){
                 e.printStackTrace();
