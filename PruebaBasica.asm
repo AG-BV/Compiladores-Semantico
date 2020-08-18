@@ -1,6 +1,6 @@
 SECTION .text
-global start
-start:
+global main
+main:
 mov dword [c], 2
 ;----------Inicio funcion------------
 fi :
@@ -23,12 +23,15 @@ cmp eax, 0
 pop eax
 jg Else_label_1
 mov dword [b], 3
+jmp Exit_label_1
+Else_label_1 :
+mov dword [a], 3
 Exit_label_1 :
 ;-------Fin if-------
 mov eax, dword [a]
 sub eax, 3
 mov dword [z], eax
-jump Exit_label_0
+jmp Exit_label_0
 Else_label_0 :
 ;----------IF---------
 push eax
@@ -38,6 +41,9 @@ cmp eax, 0
 pop eax
 jg Else_label_2
 mov dword [b], 3
+jmp Exit_label_2
+Else_label_2 :
+mov dword [a], 3
 Exit_label_2 :
 ;-------Fin if-------
 Exit_label_0 :
@@ -61,10 +67,10 @@ pop eax
 jl While_exit_label_4
 mov dword [a], 2
 mov dword [a], 2
-jump While_label_4
+jmp While_label_4
 While_exit_label_4 :
 ;---------Fin While---------
-jump While_label_3
+jmp While_label_3
 While_exit_label_3 :
 ;---------Fin While---------
 mov eax,  3

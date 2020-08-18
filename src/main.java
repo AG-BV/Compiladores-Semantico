@@ -92,7 +92,7 @@ public class main {
             // Eliminar archivo de salida si hay error
             sintactico.myWriter.close();
             if (sintactico.errorEncontrado) {
-                System.out.println("Eliminando archivo de salida...");
+                System.out.println("Eliminando por un error archivo de salida...");
                 File archivoS = new File(nombreSalida);
                 archivoS.delete();
             }
@@ -101,3 +101,5 @@ public class main {
         }
     }
 }
+// instruccion para generar el ejecutable
+// nasm -f elf -o codigo.o PruebaBasica.asm && gcc -m32 codigo.o -o salida
